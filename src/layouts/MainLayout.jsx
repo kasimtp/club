@@ -40,7 +40,7 @@ const MainLayout = () => {
                 <span className="text-xl font-extrabold text-white tracking-wider uppercase group-hover:text-primary transition-colors">
                   Universal<span className="text-primary font-normal">Club</span>
                 </span>
-                <span className="hidden sm:block text-[10px] tracking-widest text-gray-500 uppercase font-semibold">Athletic & Social</span>
+                <span className="hidden sm:block text-[10px] tracking-widest text-gray-500 uppercase font-semibold">Arts & Sports</span>
               </div>
             </Link>
 

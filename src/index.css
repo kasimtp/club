@@ -1,1 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-dark-bg: #f9fafb;
+  
+  /* Layout backgrounds mapped to light values */
+  --color-slate-950: #ffffff;
+  --color-slate-900: #f8fafc;
+  
+  /* Card and item backgrounds mapped to light values */
+  --color-gray-950: #f8fafc;
+  --color-gray-900: #ffffff;
+  
+  /* Borders and lines mapped to light/slate values */
+  --color-gray-850: #e2e8f0;
+  --color-gray-800: #e2e8f0;
+  --color-gray-750: #cbd5e1;
+  --color-gray-700: #94a3b8;
+  
+  /* Text colors inverted to be dark slate/gray */
+  --color-gray-200: #1e293b;
+  --color-gray-300: #334155;
+  --color-gray-400: #475569;
+  --color-gray-500: #64748b;
+  
+  /* The default white text color is mapped to dark slate for readability on light backgrounds */
+  --color-white: #0f172a;
+}
+
+/* Base custom resets */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-dark-bg);
+  color: var(--color-gray-200);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism nav header */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Custom minimal scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Minimal Input Styling */
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e293b;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+/* Container override to restore white text inside colored/dark containers */
+.bg-primary,
+.bg-primary-hover,
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-emerald-600,
+.bg-emerald-500,
+.bg-red-600,
+.bg-red-500,
+.bg-black,
+[class*="bg-gradient-to-"] {
+  --color-white: #ffffff !important;
+  --color-gray-200: #f1f5f9 !important;
+  --color-gray-300: #e2e8f0 !important;
+  --color-gray-400: #cbd5e1 !important;
+  --color-gray-500: #94a3b8 !important;
+}
+
+/* Keep text white on custom badge/status elements */
+.text-white-force {
+  color: #ffffff !important;
+}

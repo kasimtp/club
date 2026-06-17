@@ -28,7 +28,7 @@ const MainLayout = () => {
   return (
     <div className="flex flex-col min-h-screen bg-dark-bg text-gray-200">
       {/* Navigation Bar */}
-      <nav className="glass-nav sticky top-0 z-40 border-b border-gray-800/80">
+      <nav className="glass-nav sticky top-0 z-40 border-b border-gray-850/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
@@ -67,7 +67,7 @@ const MainLayout = () => {
             <div className="hidden lg:flex items-center gap-3">
               <Link
                 to={isAuthenticated ? "/admin/dashboard" : "/admin/login"}
-                className="flex items-center gap-1.5 px-4 py-2 border border-gray-700/80 text-sm font-semibold text-gray-300 hover:text-white hover:border-gray-500 rounded-lg transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 border border-gray-850 text-sm font-semibold text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 rounded-lg transition-all"
               >
                 <FiUser className="text-base" />
                 {isAuthenticated ? 'Dashboard' : 'Admin'}
@@ -84,7 +84,7 @@ const MainLayout = () => {
             <div className="lg:hidden flex items-center gap-3">
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 border border-gray-800 text-gray-400 hover:text-white rounded-lg transition-all"
+                className="p-2 border border-gray-850 text-gray-400 hover:text-primary rounded-lg transition-all"
                 aria-label="Toggle Navigation Menu"
               >
                 {isOpen ? <FiX className="text-xl" /> : <FiMenu className="text-xl" />}
@@ -95,7 +95,7 @@ const MainLayout = () => {
 
         {/* Mobile Navigation Drawer */}
         {isOpen && (
-          <div className="lg:hidden bg-slate-950 border-t border-gray-850/60 animate-fade-in">
+          <div className="lg:hidden bg-white border-t border-gray-850/60 animate-fade-in">
             <div className="px-4 pt-3 pb-6 space-y-2">
               {navLinks.map((link) => (
                 <NavLink
@@ -106,18 +106,18 @@ const MainLayout = () => {
                     `block px-4 py-3 text-base font-semibold rounded-lg transition-all ${
                       isActive
                         ? 'text-primary bg-primary/10'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                        : 'text-gray-400 hover:text-primary hover:bg-gray-950'
                     }`
                   }
                 >
                   {link.name}
                 </NavLink>
               ))}
-              <div className="pt-4 border-t border-gray-900 flex flex-col gap-3">
+              <div className="pt-4 border-t border-gray-850 flex flex-col gap-3">
                 <Link
                   to={isAuthenticated ? "/admin/dashboard" : "/admin/login"}
                   onClick={() => setIsOpen(false)}
-                  className="w-full py-3 border border-gray-800 text-center text-sm font-semibold text-gray-300 hover:text-white rounded-lg transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-3 border border-gray-850 text-center text-sm font-semibold text-gray-400 hover:text-primary rounded-lg transition-all flex items-center justify-center gap-1.5"
                 >
                   <FiUser className="text-base" />
                   {isAuthenticated ? 'Admin Dashboard' : 'Admin Login'}
@@ -141,7 +141,7 @@ const MainLayout = () => {
       </main>
 
       {/* Public Footer */}
-      <footer className="bg-slate-950 border-t border-gray-900">
+      <footer className="bg-slate-900 border-t border-gray-850">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
             {/* Brand Card */}
@@ -185,7 +185,7 @@ const MainLayout = () => {
                 <li className="flex justify-between"><span>Weekdays:</span> <span className="text-gray-300">06:00 AM - 10:00 PM</span></li>
                 <li className="flex justify-between"><span>Saturdays:</span> <span className="text-gray-300">07:00 AM - 08:00 PM</span></li>
                 <li className="flex justify-between"><span>Sundays:</span> <span className="text-gray-300">08:00 AM - 06:00 PM</span></li>
-                <li className="flex items-center gap-1.5 pt-2 border-t border-gray-900 mt-2">
+                <li className="flex items-center gap-1.5 pt-2 border-t border-gray-850 mt-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span className="text-xs">Facilities open now</span>
                 </li>
@@ -210,7 +210,7 @@ const MainLayout = () => {
           </div>
 
           {/* Copyright Sub-footer */}
-          <div className="border-t border-gray-900 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+          <div className="border-t border-gray-850 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
             <p>© {new Date().getFullYear()} Universal Club Management System. All rights reserved.</p>
             <div className="flex gap-4">
               <Link to="/admin/login" className="hover:text-primary transition-colors">Admin Access Portal</Link>

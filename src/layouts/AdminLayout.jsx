@@ -52,12 +52,12 @@ const AdminLayout = () => {
 
       {/* Sidebar Navigation */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-40 w-64 glass border-r border-gray-800/80 flex flex-col justify-between transform transition-transform duration-300 lg:static lg:transform-none ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-850 flex flex-col justify-between transform transition-transform duration-300 lg:static lg:transform-none ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Sidebar Header */}
-        <div className="p-6 border-b border-gray-800/80 flex items-center justify-between shrink-0">
+        <div className="p-6 border-b border-gray-850 flex items-center justify-between shrink-0">
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <FiHome className="text-white text-sm" />
@@ -86,7 +86,7 @@ const AdminLayout = () => {
                 `flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'text-primary bg-primary/10 border border-primary/20 shadow-xs shadow-emerald-500/5'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50 border border-transparent'
+                    : 'text-gray-400 hover:text-primary hover:bg-gray-950 border border-transparent'
                 }`
               }
             >
@@ -97,13 +97,13 @@ const AdminLayout = () => {
         </nav>
 
         {/* Sidebar Footer (Profile + Logout) */}
-        <div className="p-4 border-t border-gray-800/80 shrink-0">
+        <div className="p-4 border-t border-gray-850 shrink-0">
           {user && (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-900/60 border border-gray-800/50 mb-3">
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-950 border border-gray-850 mb-3">
               <img 
                 src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80' } 
                 alt="Admin avatar" 
-                className="w-9 h-9 rounded-full object-cover border border-gray-700"
+                className="w-9 h-9 rounded-full object-cover border border-gray-850"
               />
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-white truncate">{user.name}</p>
@@ -125,11 +125,11 @@ const AdminLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* Dashboard Top Header */}
-        <header className="h-16 border-b border-gray-850/80 flex items-center justify-between px-6 shrink-0 bg-slate-900/40">
+        <header className="h-16 border-b border-gray-850/60 flex items-center justify-between px-6 shrink-0 bg-white">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-400 hover:text-white border border-gray-800 rounded-lg"
+              className="lg:hidden p-2 text-gray-400 hover:text-primary border border-gray-850 rounded-lg"
               aria-label="Open sidebar"
             >
               <FiMenu className="text-xl" />
@@ -143,20 +143,20 @@ const AdminLayout = () => {
           <div className="flex items-center gap-3">
             <Link 
               to="/" 
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 border border-gray-800 hover:border-gray-700 text-xs font-semibold text-gray-400 hover:text-white rounded-lg transition-all"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 border border-gray-850 hover:border-primary/50 hover:bg-primary/5 text-xs font-semibold text-gray-400 hover:text-primary rounded-lg transition-all"
             >
               <FiHome />
               View Site
             </Link>
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-red-900/40 hover:border-red-500 bg-red-500/10 hover:bg-red-500 text-xs font-bold text-red-400 hover:text-white rounded-lg transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 bg-red-500/10 hover:bg-red-600 text-xs font-bold text-red-500 hover:text-slate-50 rounded-lg transition-all cursor-pointer"
               title="Logout and delete auth session"
             >
               <FiLogOut />
               <span>Logout</span>
             </button>
-            <div className="h-4 w-[1px] bg-gray-800 hidden sm:block"></div>
+            <div className="h-4 w-[1px] bg-gray-850 hidden sm:block"></div>
             <span className="hidden sm:inline-block text-xs font-semibold text-primary px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20">
               Admin Mode
             </span>
@@ -164,7 +164,7 @@ const AdminLayout = () => {
         </header>
 
         {/* Viewport Outlet */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-950 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-dark-bg custom-scrollbar">
           <Outlet />
         </main>
       </div>

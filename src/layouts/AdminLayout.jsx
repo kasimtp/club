@@ -1,176 +1,200 @@
-// Admin Dashboard Layout: Collapsible Sidebar, Header and Main content area
+// Admin Layout: Desktop Left Sidebar, Mobile Drawer, Live Sync Status, and Top Bar
 import React, { useState } from 'react';
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  FiTrendingUp, FiUsers, FiCalendar, FiImage, FiBookOpen, 
-  FiLayers, FiFileText, FiSettings, FiLogOut, FiHome, FiMenu, FiX 
+  FiGrid, FiUsers, FiFileText, FiAward, FiSliders, 
+  FiCalendar, FiImage, FiLogOut, FiHome, FiMenu, FiX, 
+  FiShield 
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useClubData } from '../context/ClubDataContext';
+import Avatar from '../components/ui/Avatar';
+import clubLogo from '../assets/club-logo.webp';
 
-const AdminLayout = () => {
+export default function AdminLayout() {
   const { user, logout } = useAuth();
-  const { showToast } = useToast();
+  const { requests } = useClubData();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
 
-  const menuItems = [
-    { name: 'Overview', path: '/admin/dashboard', icon: FiTrendingUp },
-    { name: 'Manage Members', path: '/admin/members', icon: FiUsers },
-    { name: 'Manage Events', path: '/admin/events', icon: FiCalendar },
-    { name: 'Manage Gallery', path: '/admin/gallery', icon: FiImage },
-    { name: 'Manage News', path: '/admin/news', icon: FiBookOpen },
-    { name: 'Manage Team', path: '/admin/team', icon: FiLayers },
-    { name: 'Membership Requests', path: '/admin/requests', icon: FiFileText },
-    { name: 'Profile Settings', path: '/admin/settings', icon: FiSettings }
+  const pendingCount = requests.filter(r => r.status === 'pending').length;
+
+  const adminNavItems = [
+    { name: 'Dashboard', path: '/admin/dashboard', icon: FiGrid },
+    { name: 'Registered Users', path: '/admin/users', icon: FiUsers },
+    { 
+      name: 'Applications Queue', 
+      path: '/admin/requests', 
+      icon: FiFileText,
+      badge: pendingCount > 0 ? pendingCount : null
+    },
+    { name: 'Members Directory', path: '/admin/members', icon: FiAward },
+    { name: 'Hero Slider CMS', path: '/admin/slides', icon: FiSliders },
+    { name: 'Programs CMS', path: '/admin/programs', icon: FiCalendar },
+    { name: 'Gallery CMS', path: '/admin/gallery', icon: FiImage },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      localStorage.removeItem('universal_club_jwt_token'); // Explicitly force token deletion
-      showToast('Logged out of admin panel successfully', 'info');
-      navigate('/admin/login');
-    } catch (err) {
-      localStorage.removeItem('universal_club_jwt_token'); // Force clean even on error
-      showToast('Session cleared', 'info');
-      navigate('/admin/login');
-    }
+  const handleSignOut = () => {
+    logout();
+    navigate('/admin/login');
   };
 
   return (
-    <div className="flex h-screen bg-dark-bg text-gray-100 overflow-hidden">
+    <div className="min-h-screen bg-[#F8F8F9] flex flex-col md:flex-row text-slate-900 font-sans">
       
-      {/* Backdrops for Mobile Sidebar */}
-      {isSidebarOpen && (
+      {/* Mobile Admin Header */}
+      <div className="md:hidden bg-slate-950 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center">
+            <img src={clubLogo} alt="Club Logo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <h2 className="text-xs font-black uppercase text-amber-400 leading-tight">Admin Console</h2>
+            <p className="text-[9px] text-slate-400">Universal Club Management</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+          aria-label="Toggle admin navigation"
+        >
+          {mobileMenuOpen ? <FiX className="text-xl" /> : <FiMenu className="text-xl" />}
+        </button>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-xs lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        ></div>
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
       )}
 
-      {/* Sidebar Navigation */}
-      <aside 
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-850 flex flex-col justify-between transform transition-transform duration-300 lg:static lg:transform-none ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {/* Sidebar Header */}
-        <div className="p-6 border-b border-gray-850 flex items-center justify-between shrink-0">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <FiHome className="text-white text-sm" />
+      {/* Left Sidebar (Desktop Fixed & Mobile Slide Drawer) */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 bg-slate-950 text-white flex flex-col justify-between border-r border-slate-900 transition-transform duration-300 md:static md:translate-x-0
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        {/* Top Brand & Title */}
+        <div className="p-6 border-b border-slate-900">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white p-1.5 flex items-center justify-center shadow-md">
+              <img src={clubLogo} alt="Club Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-lg font-extrabold text-white uppercase tracking-wider">
-              Universal<span className="text-primary font-normal">Panel</span>
-            </span>
-          </Link>
-          <button 
-            onClick={() => setIsSidebarOpen(false)}
-            className="text-gray-400 hover:text-white p-1 rounded-lg lg:hidden"
-          >
-            <FiX className="text-xl" />
-          </button>
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-tight text-white">Universal Club</h2>
+              <span className="inline-block px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400 font-extrabold text-[9px] uppercase tracking-wider">
+                Admin Center
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              onClick={() => setIsSidebarOpen(false)}
-              end={item.path === '/admin/dashboard'}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+        <nav className="p-4 space-y-1 overflow-y-auto flex-1 custom-scrollbar">
+          <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+            Operations & CMS
+          </div>
+
+          {adminNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+
+            return (
+              <NavLink
+                key={item.name}
+                to={item.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   isActive
-                    ? 'text-primary bg-primary/10 border border-primary/20 shadow-xs shadow-emerald-500/5'
-                    : 'text-gray-400 hover:text-primary hover:bg-gray-950 border border-transparent'
-                }`
-              }
-            >
-              <item.icon className="text-lg shrink-0" />
-              <span>{item.name}</span>
-            </NavLink>
-          ))}
+                    ? 'bg-amber-400 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="text-base shrink-0" />
+                  <span>{item.name}</span>
+                </div>
+
+                {item.badge && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    isActive ? 'bg-slate-950 text-white' : 'bg-red-500 text-white'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
-        {/* Sidebar Footer (Profile + Logout) */}
-        <div className="p-4 border-t border-gray-850 shrink-0">
-          {user && (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-950 border border-gray-850 mb-3">
-              <img 
-                src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80' } 
-                alt="Admin avatar" 
-                className="w-9 h-9 rounded-full object-cover border border-gray-850"
-              />
-              <div className="overflow-hidden">
-                <p className="text-xs font-semibold text-white truncate">{user.name}</p>
-                <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
-              </div>
+        {/* Bottom Profile & Actions */}
+        <div className="p-4 border-t border-slate-900 space-y-3">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <Avatar src={user?.profilePhoto} name={user?.name || 'Admin'} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate">{user?.name || 'Administrator'}</p>
+              <p className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@universalclub.com'}</p>
             </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/20"
-          >
-            <FiLogOut className="text-lg shrink-0" />
-            <span>Sign Out</span>
-          </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <Link
+              to="/"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors"
+            >
+              <FiHome className="text-sm" /> Public Site
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs font-bold transition-all"
+            >
+              <FiLogOut className="text-sm" /> Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Main Panel Viewport */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main Admin Content Viewport */}
+      <div className="flex-1 flex flex-col min-w-0">
         
-        {/* Dashboard Top Header */}
-        <header className="h-16 border-b border-gray-850/60 flex items-center justify-between px-6 shrink-0 bg-white">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-400 hover:text-primary border border-gray-850 rounded-lg"
-              aria-label="Open sidebar"
-            >
-              <FiMenu className="text-xl" />
-            </button>
-            <h2 className="text-lg font-bold text-white tracking-wide">
-              {/* Dynamic Header based on active path */}
-              Admin Workspace
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/" 
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 border border-gray-850 hover:border-primary/50 hover:bg-primary/5 text-xs font-semibold text-gray-400 hover:text-primary rounded-lg transition-all"
-            >
-              <FiHome />
-              View Site
-            </Link>
-            <button 
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 bg-red-500/10 hover:bg-red-600 text-xs font-bold text-red-500 hover:text-slate-50 rounded-lg transition-all cursor-pointer"
-              title="Logout and delete auth session"
-            >
-              <FiLogOut />
-              <span>Logout</span>
-            </button>
-            <div className="h-4 w-[1px] bg-gray-850 hidden sm:block"></div>
-            <span className="hidden sm:inline-block text-xs font-semibold text-primary px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20">
-              Admin Mode
+        {/* Top Admin Bar on Desktop */}
+        <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-slate-200">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+              Universal Club Administration
             </span>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight capitalize">
+              {location.pathname.split('/')[2]?.replace('-', ' ') || 'Dashboard'}
+            </h1>
           </div>
-        </header>
 
-        {/* Viewport Outlet */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-dark-bg custom-scrollbar">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Real-time Live Sync</span>
+            </div>
+
+            <Link
+              to="/"
+              className="px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
+            >
+              View Public Website →
+            </Link>
+          </div>
+        </div>
+
+        {/* Dynamic Admin Page Route Outlet */}
+        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-x-hidden">
           <Outlet />
-        </main>
+        </div>
+
       </div>
 
     </div>
   );
-};
-
-export default AdminLayout;
+}

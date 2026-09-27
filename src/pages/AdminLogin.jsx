@@ -1,132 +1,131 @@
-// Admin Login Page Component
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { FiLock, FiUser, FiActivity, FiAlertCircle } from 'react-icons/fi';
+// Administrator Portal Sign-In Page
+import React, { useState } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { FiLock, FiUser, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import Button from '../components/ui/Button';
+import clubLogo from '../assets/club-logo.webp';
 
-const AdminLogin = () => {
-  const { login, isAuthenticated, loading } = useAuth();
-  const { showToast } = useToast();
+export default function AdminLogin() {
+  const { loginAdmin, isAdmin } = useAuth();
+  const [username, setUsername] = useState('clubadmin');
+  const [password, setPassword] = useState('adm12345');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [localLoading, setLocalLoading] = useState(false);
-  const [error, setError] = useState('');
+  if (isAdmin) {
+    const destination = location.state?.from?.pathname || '/admin/dashboard';
+    navigate(destination, { replace: true });
+    return null;
+  }
 
-  // Destination path (redirect back to where user was or default dashboard)
-  const from = location.state?.from?.pathname || '/admin/dashboard';
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, from]);
-
-  const handleLoginSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    if (!username.trim() || !password.trim()) {
-      setError('Please fill in both username and password fields.');
-      return;
-    }
-
-    setLocalLoading(true);
     try {
-      await login(username, password);
-      showToast('Welcome back, Administrator!', 'success');
-      navigate(from, { replace: true });
+      await loginAdmin(username, password);
+      navigate('/admin/dashboard');
     } catch (err) {
-      setError(err.message || 'Login failed. Please check credentials.');
-      showToast('Authentication failed', 'error');
+      setError(err.message || 'Invalid administrator credentials.');
     } finally {
-      setLocalLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* Background glow overlay */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-      <div className="max-w-md w-full bg-slate-900 border border-gray-800 rounded-3xl p-8 sm:p-10 shadow-2xl relative z-10 space-y-6">
+    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 animate-fade-in">
+      <div className="w-full max-w-md p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 shadow-xl space-y-6 text-center">
         
-        {/* Brand Header */}
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 mx-auto">
-            <FiActivity className="text-white text-2xl" />
+        {/* Shield Hero Icon / Brand Crest */}
+        <div className="space-y-3">
+          <div className="w-20 h-20 rounded-3xl bg-white border border-slate-200 p-2 flex items-center justify-center mx-auto shadow-lg shadow-black/5">
+            <img src={clubLogo} alt="Universal Club Crest" className="w-full h-full object-contain" />
           </div>
-          <div>
-            <h2 className="text-2xl font-extrabold text-white">Admin Portal Access</h2>
-            <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-bold">Universal Club Management</p>
-          </div>
+          <span className="inline-block px-3 py-1 rounded-full bg-amber-400/20 text-amber-800 text-[10px] font-black uppercase tracking-wider">
+            Authorised Access Only
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+            Admin Console Login
+          </h1>
+          <p className="text-xs text-slate-500 max-w-xs mx-auto">
+            Universal Sports & Arts Club back-office portal and member management.
+          </p>
         </div>
 
-        {/* Error Callout */}
         {error && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400">
-            <FiAlertCircle className="text-lg shrink-0 mt-0.5" />
-            <p className="text-xs font-medium leading-relaxed">{error}</p>
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 animate-slide-up">
+            {error}
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleLoginSubmit} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-4 text-left">
           <div>
-            <label className="form-label" htmlFor="username">Username or Email</label>
+            <label className="form-label">Username or Admin Email</label>
             <div className="relative">
-              <FiUser className="absolute left-3.5 top-3.5 text-gray-500" />
+              <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
               <input
-                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="form-input pl-10 text-sm"
                 placeholder="clubadmin"
-                disabled={localLoading || loading}
+                className="form-input pl-11"
+                required
               />
             </div>
           </div>
 
           <div>
-            <label className="form-label" htmlFor="password">Password</label>
+            <label className="form-label">Password</label>
             <div className="relative">
-              <FiLock className="absolute left-3.5 top-3.5 text-gray-500" />
+              <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
               <input
-                id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="form-input pl-10 text-sm"
                 placeholder="••••••••"
-                disabled={localLoading || loading}
+                className="form-input pl-11 pr-11"
+                required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={localLoading || loading}
-            className="w-full py-3.5 bg-primary hover:bg-primary-hover disabled:bg-gray-800 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
-          >
-            {localLoading || loading ? 'Authenticating...' : 'Sign In'}
-          </button>
+          <div className="pt-2">
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              fullWidth
+              loading={loading}
+              iconRight={FiArrowRight}
+            >
+              Sign In to Admin Console
+            </Button>
+          </div>
         </form>
 
-        {/* Credentials Helper Callout */}
-        <div className="pt-4 border-t border-gray-850 text-center">
-          <p className="text-[10px] text-gray-500">
-            Developer Notice: Use <span className="text-gray-400 font-semibold">clubadmin</span> & <span className="text-gray-400 font-semibold">adm12345</span> to bypass auth.
-          </p>
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <Link to="/" className="hover:text-slate-900 transition-colors">
+            ← Back to Home
+          </Link>
+          <Link to="/login" className="hover:text-slate-900 transition-colors">
+            Member Login →
+          </Link>
         </div>
 
       </div>
     </div>
   );
-};
-
-export default AdminLogin;
+}

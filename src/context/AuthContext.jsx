@@ -1,41 +1,87 @@
-// Authentication Context
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// Global Auth Context Provider
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState(null);
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  const [loading, setLoading] = useState(false);
 
-  // Check if user is logged in on mount
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-      } catch (err) {
-        console.error('Failed to restore auth session:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initializeAuth();
-  }, []);
-
-  const login = async (username, password) => {
-    setLoading(true);
-    setAuthError(null);
+  const refreshUser = useCallback(async () => {
     try {
-      const response = await authService.login(username, password);
-      if (response.success) {
-        setUser(response.user);
-        return { success: true };
+      const current = authService.getCurrentUser();
+      if (current) {
+        if (current.role === 'admin') {
+          setUser(current);
+        } else {
+          const synced = await authService.syncUserProfile(current);
+          setUser(synced);
+        }
+      } else {
+        setUser(null);
       }
     } catch (err) {
-      setAuthError(err.message || 'Authentication failed');
-      throw err;
+      console.error('Error refreshing user session:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const initSession = async () => {
+      const current = authService.getCurrentUser();
+      if (current && isMounted) {
+        if (current.role === 'admin') {
+          setUser(current);
+        } else {
+          const synced = await authService.syncUserProfile(current);
+          if (isMounted) setUser(synced);
+        }
+      }
+    };
+    initSession();
+
+    // Listen for storage changes across tabs
+    const handleStorage = (e) => {
+      if (e.key === 'universal_club_auth_user' || e.key === 'universal_club_members_store') {
+        refreshUser();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [refreshUser]);
+
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const loggedUser = await authService.signInWithGoogle();
+      setUser(loggedUser);
+      return loggedUser;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithMockGoogle = async (mockData) => {
+    setLoading(true);
+    try {
+      const loggedUser = await authService.signInWithMockGoogle(mockData);
+      setUser(loggedUser);
+      return loggedUser;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginAdmin = async (username, password) => {
+    setLoading(true);
+    try {
+      const adminUser = await authService.loginAdmin(username, password);
+      setUser(adminUser);
+      return adminUser;
     } finally {
       setLoading(false);
     }
@@ -46,38 +92,47 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
       setUser(null);
-    } catch (err) {
-      console.error('Logout error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProfile = async (profileData) => {
-    setLoading(true);
-    try {
-      const response = await authService.updateProfile(profileData);
-      setUser(response.data);
-      return { success: true };
-    } catch (err) {
-      console.error('Update profile error:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
+  const updateUserProfile = async (profileData) => {
+    if (!user) return;
+    const updated = await authService.updateProfile(user.uid || user.id, profileData);
+    setUser(updated);
+    return updated;
   };
 
-  const value = {
-    user,
-    loading,
-    authError,
-    login,
-    logout,
-    updateProfile,
-    isAuthenticated: !!user
-  };
+  const role = user?.role || null;
+  const isAdmin = role === 'admin';
+  const membershipStatus = user?.membershipStatus || 'not_applied';
+  const isMember = membershipStatus === 'approved';
+  const isPending = membershipStatus === 'pending';
+  const memberData = user?.memberData || null;
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        isAdmin,
+        isMember,
+        isPending,
+        membershipStatus,
+        memberData,
+        loading,
+        loginWithGoogle,
+        loginWithMockGoogle,
+        loginAdmin,
+        logout,
+        updateUserProfile,
+        refreshUser
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {

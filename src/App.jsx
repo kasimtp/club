@@ -1,4 +1,4 @@
-// Main App Entry File
+// Main App Router & Entry Point
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -14,26 +14,29 @@ import AdminLayout from './layouts/AdminLayout';
 // Protected Route Shield
 import ProtectedRoute from './routes/ProtectedRoute';
 
-// Public Pages
+// Public & Member Pages
 import Home from './pages/Home';
 import About from './pages/About';
 import Services from './pages/Services';
 import Events from './pages/Events';
+import Programs from './pages/Programs';
+import ProgramDetail from './pages/ProgramDetail';
 import Gallery from './pages/Gallery';
 import Team from './pages/Team';
 import Membership from './pages/Membership';
+import MemberProfile from './pages/MemberProfile';
 import Contact from './pages/Contact';
+import MemberLogin from './pages/MemberLogin';
 import AdminLogin from './pages/AdminLogin';
 
-// Admin Pages
+// Admin CMS & Management Pages
 import Dashboard from './pages/admin/Dashboard';
-import ManageMembers from './pages/admin/ManageMembers';
-import ManageEvents from './pages/admin/ManageEvents';
-import ManageGallery from './pages/admin/ManageGallery';
-import ManageNews from './pages/admin/ManageNews';
-import ManageTeam from './pages/admin/ManageTeam';
-import ManageRequests from './pages/admin/ManageRequests';
-import ProfileSettings from './pages/admin/ProfileSettings';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminRequests from './pages/admin/AdminRequests';
+import AdminMembers from './pages/admin/AdminMembers';
+import AdminSlides from './pages/admin/AdminSlides';
+import AdminPrograms from './pages/admin/AdminPrograms';
+import AdminGallery from './pages/admin/AdminGallery';
 
 function App() {
   return (
@@ -43,38 +46,40 @@ function App() {
           <BrowserRouter>
             <Routes>
               
-              {/* Public Website Routes */}
+              {/* Public & Member Routes */}
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<Home />} />
                 <Route path="about" element={<About />} />
                 <Route path="services" element={<Services />} />
                 <Route path="events" element={<Events />} />
+                <Route path="programs" element={<Programs />} />
+                <Route path="programs/:id" element={<ProgramDetail />} />
                 <Route path="gallery" element={<Gallery />} />
                 <Route path="team" element={<Team />} />
                 <Route path="membership" element={<Membership />} />
+                <Route path="profile" element={<MemberProfile />} />
                 <Route path="contact" element={<Contact />} />
+                <Route path="login" element={<MemberLogin />} />
                 <Route path="admin/login" element={<AdminLogin />} />
               </Route>
 
-              {/* Protected Admin Dashboard Panel */}
+              {/* Protected Administrator Console */}
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRole="admin">
                     <AdminLayout />
                   </ProtectedRoute>
                 }
               >
-                {/* Redirect /admin to /admin/dashboard */}
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="members" element={<ManageMembers />} />
-                <Route path="events" element={<ManageEvents />} />
-                <Route path="gallery" element={<ManageGallery />} />
-                <Route path="news" element={<ManageNews />} />
-                <Route path="team" element={<ManageTeam />} />
-                <Route path="requests" element={<ManageRequests />} />
-                <Route path="settings" element={<ProfileSettings />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="requests" element={<AdminRequests />} />
+                <Route path="members" element={<AdminMembers />} />
+                <Route path="slides" element={<AdminSlides />} />
+                <Route path="programs" element={<AdminPrograms />} />
+                <Route path="gallery" element={<AdminGallery />} />
               </Route>
 
               {/* Catch-all Redirect */}

@@ -1,197 +1,322 @@
-// Gallery Page Component: Photos and Video Grid
+// Photo Gallery & Lightbox Page
 import React, { useState } from 'react';
-import { FiImage, FiVideo, FiPlay, FiMaximize2, FiCalendar, FiBookOpen, FiCompass } from 'react-icons/fi';
+import { 
+  FiPlus, FiX, FiChevronLeft, FiChevronRight, 
+  FiImage, FiUploadCloud, FiTag, FiFileText 
+} from 'react-icons/fi';
 import { useClubData } from '../context/ClubDataContext';
-import Modal from '../components/Modal';
-import Spinner from '../components/Spinner';
+import { useAuth } from '../context/AuthContext';
+import Chip from '../components/ui/Chip';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import { uploadMedia } from '../services/uploadService';
 
-const Gallery = () => {
-  const { gallery, loading } = useClubData();
+export default function Gallery() {
+  const { gallery, addGalleryPhoto } = useClubData();
+  const { user, isMember, isAdmin } = useAuth();
 
-  // Filters State
-  const [activeType, setActiveType] = useState('All'); // All, photo, video
-  const [activeCategory, setActiveCategory] = useState('All'); // All, Training, Events, Workshops, Social
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [activeLightboxIndex, setActiveLightboxIndex] = useState(null);
+  
+  // Upload modal state
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadData, setUploadData] = useState({
+    title: '',
+    description: '',
+    category: 'Facilities',
+    imageUrl: ''
+  });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
-  // Modal State
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const categories = ['All', 'Sports', 'Events', 'Facilities', 'Community'];
+  const uploadCategories = ['Facilities', 'Sports', 'Events', 'Community', 'General'];
 
-  const categories = ['All', 'Training', 'Events', 'Workshops', 'Social'];
-  const types = [
-    { value: 'All', label: 'All Media', icon: null },
-    { value: 'photo', label: 'Photos Only', icon: FiImage },
-    { value: 'video', label: 'Videos Only', icon: FiVideo }
-  ];
-
-  // Filtering Logic
-  const filteredGallery = gallery.filter((item) => {
-    const matchesType = activeType === 'All' || item.type === activeType;
-    const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
-    return matchesType && matchesCategory;
+  const filteredPhotos = gallery.filter((photo) => {
+    if (selectedCategory === 'All') return true;
+    return photo.category?.toLowerCase() === selectedCategory.toLowerCase();
   });
 
-  const handleOpenItem = (item) => {
-    setSelectedItem(item);
-    setIsModalOpen(true);
+  const handleOpenLightbox = (index) => {
+    setActiveLightboxIndex(index);
   };
 
+  const handleCloseLightbox = () => {
+    setActiveLightboxIndex(null);
+  };
+
+  const handleNextPhoto = () => {
+    if (activeLightboxIndex !== null) {
+      setActiveLightboxIndex((activeLightboxIndex + 1) % filteredPhotos.length);
+    }
+  };
+
+  const handlePrevPhoto = () => {
+    if (activeLightboxIndex !== null) {
+      setActiveLightboxIndex((activeLightboxIndex - 1 + filteredPhotos.length) % filteredPhotos.length);
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const url = await uploadMedia(file, 'gallery', 'image');
+      setUploadData(prev => ({ ...prev, imageUrl: url }));
+    }
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!uploadData.imageUrl) {
+      alert('Please select an image file or provide a photo URL.');
+      return;
+    }
+    if (!uploadData.title.trim()) {
+      alert('Please enter a photo title.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await addGalleryPhoto(uploadData, user?.name || 'Club Member');
+      setIsUploadOpen(false);
+      setUploadData({ title: '', description: '', category: 'Facilities', imageUrl: '' });
+      setSelectedFile(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const currentLightboxPhoto = activeLightboxIndex !== null ? filteredPhotos[activeLightboxIndex] : null;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12 animate-fade-in">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       
-      {/* Header */}
-      <div className="text-center max-w-3xl mx-auto space-y-4">
-        <span className="text-xs font-bold text-primary tracking-widest uppercase">Universal Moments</span>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-          Photo & Video Gallery
-        </h1>
-        <p className="text-gray-400 text-lg">
-          Browse training highlights, competitive events, educational seminars, and social activities.
-        </p>
+      {/* Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-sky-500" />
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+              Visual Archive
+            </span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            Club Photo Gallery
+          </h1>
+          <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
+            Moments of triumph, high-intensity workouts, sports complex facilities, and community camaraderie in pictures.
+          </p>
+        </div>
+
+        {/* Upload Button visible to Members & Admins */}
+        {(isMember || isAdmin) && (
+          <Button
+            variant="primary"
+            size="md"
+            icon={FiPlus}
+            onClick={() => setIsUploadOpen(true)}
+          >
+            Upload Photo
+          </Button>
+        )}
       </div>
 
-      {/* Filter Options */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-gray-900/30 border border-gray-850">
-        {/* Type Filter */}
-        <div className="flex items-center gap-1.5 p-1 bg-gray-950 rounded-xl border border-gray-800 w-full sm:w-auto overflow-x-auto shrink-0">
-          {types.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => setActiveType(t.value)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 uppercase tracking-wider ${
-                activeType === t.value
-                  ? 'bg-primary text-white shadow-md shadow-emerald-500/10'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {t.icon && <t.icon className="text-sm" />}
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Category Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 custom-scrollbar shrink-0">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all border ${
-                activeCategory === cat
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-transparent text-gray-400 hover:text-white border-gray-800'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+      {/* Category Filter Rail */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+        {categories.map((cat) => (
+          <Chip
+            key={cat}
+            label={cat}
+            variant={cat === 'All' ? 'slate' : 'auto'}
+            active={selectedCategory === cat}
+            onClick={() => setSelectedCategory(cat)}
+          />
+        ))}
       </div>
 
-      {/* Gallery Grid */}
-      {loading.gallery ? (
-        <Spinner text="Loading gallery..." />
-      ) : filteredGallery.length === 0 ? (
-        <div className="text-center py-20 bg-gray-900/10 border border-dashed border-gray-850 rounded-3xl">
-          <p className="text-gray-500 text-base">No media items match selected criteria.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredGallery.map((item) => (
-            <div 
-              key={item.id}
-              onClick={() => handleOpenItem(item)}
-              className="group relative rounded-2xl overflow-hidden border border-gray-850 bg-gray-900/30 cursor-pointer aspect-video shadow-md hover:-translate-y-1 hover:border-gray-750 transition-all duration-300"
+      {/* Photos CSS Grid */}
+      {filteredPhotos.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {filteredPhotos.map((photo, idx) => (
+            <div
+              key={photo.id || idx}
+              onClick={() => handleOpenLightbox(idx)}
+              className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 cursor-pointer shadow-xs hover:shadow-lg transition-all duration-300"
             >
-              {/* Cover Image */}
               <img
-                src={item.type === 'video' ? item.coverImage : item.url}
-                alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
+                src={photo.imageUrl}
+                alt={photo.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
               />
 
-              {/* Hover Darken Overlay */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                {item.type === 'video' ? (
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white text-xl shadow-lg scale-90 group-hover:scale-100 transition-all duration-300">
-                    <FiPlay className="ml-1" />
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xs flex items-center justify-center text-white text-lg hover:bg-white/20 transition-all">
-                    <FiMaximize2 />
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Label banner */}
-              <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/85 via-black/50 to-transparent flex flex-col justify-end">
-                <span className="text-[9px] uppercase tracking-wider font-extrabold text-primary mb-1">
-                  {item.category}
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                <span className="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-white font-bold text-[10px] w-fit mb-1">
+                  {photo.category || 'General'}
                 </span>
-                <h4 className="text-sm font-bold text-white leading-tight truncate">
-                  {item.title}
-                </h4>
+                <h4 className="text-xs font-bold text-white line-clamp-1">{photo.title}</h4>
               </div>
-
-              {/* Media indicator badge */}
-              <span className="absolute top-4 right-4 p-1.5 rounded-lg bg-black/60 backdrop-blur-xs text-xs text-white border border-gray-800">
-                {item.type === 'video' ? <FiVideo /> : <FiImage />}
-              </span>
             </div>
           ))}
         </div>
+      ) : (
+        <div className="p-12 rounded-3xl bg-white border border-slate-200 text-center space-y-3">
+          <FiImage className="text-4xl text-slate-300 mx-auto" />
+          <h3 className="text-base font-bold text-slate-800">No photos in this category</h3>
+          <p className="text-xs text-slate-400">Try selecting a different filter category to view photos.</p>
+        </div>
       )}
 
-      {/* Lightbox / Video Modal */}
-      {selectedItem && (
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          title={`${selectedItem.category} - ${selectedItem.title}`}
-          maxWidth={selectedItem.type === 'video' ? 'max-w-3xl' : 'max-w-2xl'}
-        >
-          <div className="space-y-4">
-            
-            {/* Visual content container */}
-            {selectedItem.type === 'video' ? (
-              <div className="aspect-video rounded-lg overflow-hidden bg-black border border-gray-800">
-                <video
-                  src={selectedItem.url}
-                  poster={selectedItem.coverImage}
-                  controls
-                  autoPlay
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
-              <div className="rounded-lg overflow-hidden max-h-[70vh] bg-slate-950 border border-gray-850 flex justify-center">
-                <img
-                  src={selectedItem.url}
-                  alt={selectedItem.title}
-                  className="w-full object-contain max-h-[60vh]"
-                />
-              </div>
-            )}
+      {/* Fullscreen Lightbox Modal */}
+      {currentLightboxPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none">
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={handleCloseLightbox}
+            className="absolute top-6 right-6 z-50 w-11 h-11 rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all"
+            aria-label="Close Lightbox"
+          >
+            <FiX className="text-2xl" />
+          </button>
 
-            {/* Description details */}
-            <div className="flex items-center justify-between pt-2">
-              <div>
-                <h3 className="text-lg font-bold text-white">{selectedItem.title}</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Category: <span className="text-indigo-400 font-semibold uppercase">{selectedItem.category}</span></p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-gray-900 border border-gray-800 hover:border-gray-700 text-xs font-semibold text-gray-300 rounded-lg transition-all"
-              >
-                Close View
-              </button>
+          {/* Previous Arrow */}
+          <button
+            type="button"
+            onClick={handlePrevPhoto}
+            className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all"
+            aria-label="Previous photo"
+          >
+            <FiChevronLeft className="text-3xl" />
+          </button>
+
+          {/* Next Arrow */}
+          <button
+            type="button"
+            onClick={handleNextPhoto}
+            className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-950 flex items-center justify-center transition-all"
+            aria-label="Next photo"
+          >
+            <FiChevronRight className="text-3xl" />
+          </button>
+
+          {/* Lightbox Center Content */}
+          <div className="max-w-4xl max-h-[85vh] flex flex-col items-center justify-center space-y-4">
+            <img
+              src={currentLightboxPhoto.imageUrl}
+              alt={currentLightboxPhoto.title}
+              className="max-h-[70vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10 animate-scale-in"
+            />
+
+            <div className="text-center space-y-1 max-w-lg text-white">
+              <span className="inline-block px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-extrabold text-[10px] uppercase tracking-wider">
+                {currentLightboxPhoto.category}
+              </span>
+              <h3 className="text-base sm:text-lg font-bold">{currentLightboxPhoto.title}</h3>
+              {currentLightboxPhoto.description && (
+                <p className="text-xs text-slate-400">{currentLightboxPhoto.description}</p>
+              )}
             </div>
-
           </div>
-        </Modal>
+        </div>
       )}
+
+      {/* Member/Admin Upload Photo Modal Sheet */}
+      <Modal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        title="Upload Photo to Club Gallery"
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleUploadSubmit} className="space-y-4">
+          <div>
+            <label className="form-label">Photo Title</label>
+            <input
+              type="text"
+              value={uploadData.title}
+              onChange={(e) => setUploadData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="e.g. Badminton Tournament Semi-Finals"
+              className="form-input"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="form-label">Category</label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {uploadCategories.map((cat) => (
+                <Chip
+                  key={cat}
+                  label={cat}
+                  active={uploadData.category === cat}
+                  onClick={() => setUploadData(prev => ({ ...prev, category: cat }))}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="form-label">Select Photo File</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="form-input pt-2.5 text-xs text-slate-600"
+            />
+          </div>
+
+          <div>
+            <label className="form-label">Or Image URL</label>
+            <input
+              type="url"
+              value={uploadData.imageUrl}
+              onChange={(e) => setUploadData(prev => ({ ...prev, imageUrl: e.target.value }))}
+              placeholder="https://..."
+              className="form-input"
+            />
+          </div>
+
+          {uploadData.imageUrl && (
+            <div className="aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+              <img src={uploadData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div>
+            <label className="form-label">Description / Caption (Optional)</label>
+            <textarea
+              value={uploadData.description}
+              onChange={(e) => setUploadData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Write a brief note about this photo..."
+              rows={2}
+              className="form-textarea"
+            />
+          </div>
+
+          <div className="pt-2 flex items-center justify-end gap-3">
+            <Button
+              variant="outline"
+              size="md"
+              type="button"
+              onClick={() => setIsUploadOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              loading={uploading}
+            >
+              Upload to Gallery
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
     </div>
   );
-};
-
-export default Gallery;
+}

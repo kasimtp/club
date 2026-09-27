@@ -1,239 +1,177 @@
-// Contact Us Page Component
+// Contact & Enquiry Form Page
 import React, { useState } from 'react';
-import { FiMail, FiPhone, FiMapPin, FiSend, FiClock } from 'react-icons/fi';
-import { useToast } from '../context/ToastContext';
+import { FiMapPin, FiPhone, FiMail, FiClock, FiSend, FiCheckCircle } from 'react-icons/fi';
+import { useClubData } from '../context/ClubDataContext';
+import Button from '../components/ui/Button';
 
-const Contact = () => {
-  const { showToast } = useToast();
-
-  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
-  const [formErrors, setFormErrors] = useState({});
-  const [sending, setSending] = useState(false);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validate = () => {
-    const errors = {};
-    if (!formData.name.trim()) errors.name = 'Full name is required';
-    
-    if (!formData.email.trim()) {
-      errors.email = 'Email address is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Please provide a valid email';
-    }
-
-    if (!formData.subject.trim()) errors.subject = 'Subject is required';
-    if (!formData.message.trim()) errors.message = 'Message text is required';
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+export default function Contact() {
+  const { clubInfo } = useClubData();
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validate()) return;
-
-    setSending(true);
-    // Simulate sending email
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      alert('Please complete all form fields.');
+      return;
+    }
+    setLoading(true);
     setTimeout(() => {
-      setSending(false);
-      showToast('Thank you! Your message has been received.', 'success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-    }, 800);
+      setLoading(false);
+      setSubmitted(true);
+      setFormData({ name: '', email: '', message: '' });
+    }, 600);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16 animate-fade-in">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 animate-fade-in">
       
       {/* Header */}
-      <div className="text-center max-w-3xl mx-auto space-y-4">
-        <span className="text-xs font-bold text-primary tracking-widest uppercase">Get in Touch</span>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-          Contact Universal Club
+      <div className="text-center space-y-3 max-w-2xl mx-auto">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-700 border border-amber-400/30 text-xs font-black uppercase tracking-wider">
+          <FiMapPin /> Connect With USAC
+        </span>
+        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+          Get in Touch
         </h1>
-        <p className="text-gray-400 text-lg">
-          Have queries about membership tiers or training programs? Send us a message!
+        <p className="text-sm text-slate-600 leading-relaxed">
+          Have queries about tournament registrations, synthetic court bookings, or membership verification? Drop us a message or visit our sports complex.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Contact info cards */}
-        <div className="lg:col-span-5 space-y-6 flex flex-col justify-between">
-          
-          <div className="space-y-6">
-            {/* Phone Card */}
-            <div className="p-5 rounded-2xl bg-gray-900/30 border border-gray-850 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xl shrink-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Coordinates Card */}
+        <div className="lg:col-span-5 p-8 rounded-3xl bg-slate-950 text-white space-y-6 shadow-xl">
+          <h2 className="text-xl font-black text-white">Complex Coordinates</h2>
+
+          <div className="space-y-4 text-xs text-slate-300">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
+                <FiMapPin />
+              </div>
+              <div>
+                <strong className="text-white block font-bold mb-0.5">Physical Address</strong>
+                <span>{clubInfo.address}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
                 <FiPhone />
               </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Call Representative</h4>
-                <p className="text-sm text-gray-300">+91 (483) 273-4567</p>
-                <p className="text-[10px] text-gray-500">Universal Helpline, Weekdays 08:00 AM - 08:00 PM</p>
+              <div>
+                <strong className="text-white block font-bold mb-0.5">Phone Enquiry</strong>
+                <a href={`tel:${clubInfo.phone}`} className="text-amber-400 hover:underline">
+                  {clubInfo.phone}
+                </a>
               </div>
             </div>
 
-            {/* Email Card */}
-            <div className="p-5 rounded-2xl bg-gray-900/30 border border-gray-850 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xl shrink-0">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-500 text-white flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
                 <FiMail />
               </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Send Email</h4>
-                <a href="mailto:info@universalclub.com" className="text-sm text-gray-300 hover:text-primary transition-colors block">info@universalclub.com</a>
-                <p className="text-[10px] text-gray-500">We respond to tickets within 12 hours</p>
+              <div>
+                <strong className="text-white block font-bold mb-0.5">Official Email</strong>
+                <a href={`mailto:${clubInfo.email}`} className="text-amber-400 hover:underline">
+                  {clubInfo.email}
+                </a>
               </div>
             </div>
 
-            {/* Address Card */}
-            <div className="p-5 rounded-2xl bg-gray-900/30 border border-gray-850 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl shrink-0">
-                <FiMapPin />
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0FA968] text-white flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
+                <FiClock />
               </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Facility Address</h4>
-                <p className="text-sm text-gray-300">Vellur, Vellur P.O., Malappuram, Kerala - 676517</p>
-                <p className="text-[10px] text-gray-500">Parking lots & bicycle stands available</p>
+              <div>
+                <strong className="text-white block font-bold mb-0.5">Facility Hours</strong>
+                <p>Weekdays: {clubInfo.openingHours.weekdays}</p>
+                <p>Weekends: {clubInfo.openingHours.weekends}</p>
               </div>
             </div>
           </div>
 
-          {/* Clock hours card */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950/20 border border-gray-850 flex items-start gap-4 mt-auto">
-            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xl shrink-0">
-              <FiClock />
-            </div>
-            <div className="space-y-1 text-xs">
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider">Hours of Operation</h4>
-              <p className="text-gray-400">Weekdays: <span className="text-white font-semibold">06:00 AM - 10:00 PM</span></p>
-              <p className="text-gray-400">Saturdays: <span className="text-white font-semibold">07:00 AM - 08:00 PM</span></p>
-              <p className="text-gray-400">Sundays: <span className="text-white font-semibold">08:00 AM - 06:00 PM</span></p>
-            </div>
+          <div className="pt-4 border-t border-slate-900 text-[11px] text-slate-400">
+            {clubInfo.affiliation}
           </div>
-
         </div>
 
-        {/* Contact Form */}
-        <div className="lg:col-span-7 p-8 rounded-3xl bg-gray-900/20 border border-gray-850">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <h3 className="text-lg font-bold text-white">Send Inquiry Message</h3>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Right Interactive Enquiry Form */}
+        <div className="lg:col-span-7 p-8 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-6">
+          <h2 className="text-xl font-black text-slate-900">Send an Online Enquiry</h2>
+
+          {submitted ? (
+            <div className="p-8 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3 animate-fade-in">
+              <FiCheckCircle className="text-4xl text-emerald-600 mx-auto" />
+              <h3 className="text-lg font-bold text-emerald-900">Message Received!</h3>
+              <p className="text-xs text-emerald-700 max-w-sm mx-auto">
+                Thank you for contacting Universal Club. A coordinator will respond to your enquiry shortly.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSubmitted(false)}
+              >
+                Send Another Message
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="form-label" htmlFor="contact-name">Full Name</label>
+                <label className="form-label">Your Name</label>
                 <input
-                  id="contact-name"
                   type="text"
-                  name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
-                  className="form-input text-xs sm:text-sm"
-                  placeholder="John Doe"
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Full name"
+                  className="form-input"
+                  required
                 />
-                {formErrors.name && <p className="text-red-500 text-[10px] mt-1">{formErrors.name}</p>}
               </div>
 
               <div>
-                <label className="form-label" htmlFor="contact-email">Email Address</label>
+                <label className="form-label">Email Address</label>
                 <input
-                  id="contact-email"
                   type="email"
-                  name="email"
                   value={formData.email}
-                  onChange={handleInputChange}
-                  className="form-input text-xs sm:text-sm"
-                  placeholder="john@example.com"
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="name@gmail.com"
+                  className="form-input"
+                  required
                 />
-                {formErrors.email && <p className="text-red-500 text-[10px] mt-1">{formErrors.email}</p>}
               </div>
-            </div>
 
-            <div>
-              <label className="form-label" htmlFor="contact-subject">Subject</label>
-              <input
-                id="contact-subject"
-                type="text"
-                name="subject"
-                value={formData.subject}
-                onChange={handleInputChange}
-                className="form-input text-xs sm:text-sm"
-                placeholder="Inquiry about training sessions..."
-              />
-              {formErrors.subject && <p className="text-red-500 text-[10px] mt-1">{formErrors.subject}</p>}
-            </div>
+              <div>
+                <label className="form-label">Message / Question</label>
+                <textarea
+                  value={formData.message}
+                  onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="How can we help you regarding membership, coaching, or court bookings?"
+                  rows={4}
+                  className="form-textarea"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="form-label" htmlFor="contact-message">Message</label>
-              <textarea
-                id="contact-message"
-                name="message"
-                value={formData.message}
-                onChange={handleInputChange}
-                rows="5"
-                className="form-input text-xs sm:text-sm"
-                placeholder="Describe your questions in detail here..."
-              ></textarea>
-              {formErrors.message && <p className="text-red-500 text-[10px] mt-1">{formErrors.message}</p>}
-            </div>
-
-            <button
-              type="submit"
-              disabled={sending}
-              className="w-full py-3 bg-primary hover:bg-primary-hover disabled:bg-gray-800 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
-            >
-              {sending ? 'Sending message...' : 'Submit Message'}
-              {!sending && <FiSend />}
-            </button>
-          </form>
+              <div className="pt-2">
+                <Button
+                  variant="primary"
+                  size="md"
+                  type="submit"
+                  loading={loading}
+                  icon={FiSend}
+                >
+                  Send Message
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
+
       </div>
-
-      {/* Vector/CSS Map Segment */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <FiMapPin className="text-primary text-lg" />
-          <h3 className="text-lg font-bold text-white">Universal Interactive Location</h3>
-        </div>
-
-        {/* Custom Premium Map Graphics */}
-        <div className="relative rounded-3xl overflow-hidden border border-gray-200 h-96 bg-slate-50 flex items-center justify-center">
-          {/* Animated map backdrop grid grid */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30"></div>
-          
-          {/* Glowing routes lanes */}
-          <svg className="absolute inset-0 w-full h-full stroke-gray-300/60 fill-none stroke-[2]" xmlns="http://www.w3.org/2000/svg">
-            <path d="M-50,150 L350,150 L400,200 L1200,200" />
-            <path d="M150,-50 L150,550" />
-            <path d="M500,0 L500,450" strokeWidth="3" className="stroke-indigo-500/20" />
-            <path d="M0,300 L1200,300" strokeWidth="4" className="stroke-emerald-500/10" />
-            <circle cx="500" cy="200" r="140" className="stroke-gray-200" />
-          </svg>
-
-          {/* Marker Anchor */}
-          <div className="relative z-10 text-center space-y-4">
-            <div className="relative flex items-center justify-center mx-auto">
-              <span className="animate-ping absolute inline-flex h-12 w-12 rounded-full bg-primary/30 opacity-75"></span>
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-3xl border-2 border-white/10 z-10">
-                <FiMapPin />
-              </div>
-            </div>
-            <div className="space-y-1 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-gray-150 max-w-xs shadow-xl mx-auto">
-              <h4 className="text-sm font-bold text-gray-900">Universal Central Facility</h4>
-              <p className="text-xs text-gray-500">Vellur, Malappuram, Kerala - 676517</p>
-              <span className="text-[10px] text-primary font-bold uppercase tracking-wider block pt-1">Open daily 06 AM - 10 PM</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
     </div>
   );
-};
-
-export default Contact;
+}

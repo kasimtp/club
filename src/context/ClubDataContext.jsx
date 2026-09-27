@@ -1,7 +1,11 @@
-// Club Data Context
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../services/api';
-import { initDb } from '../services/mockDb';
+// Club Data Context Provider
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { sliderService } from '../services/sliderService';
+import { programService } from '../services/programService';
+import { galleryService } from '../services/galleryService';
+import { eventService } from '../services/eventService';
+import { memberService } from '../services/memberService';
+import { defaultTeam, defaultNews, defaultServices, clubInfo } from '../data/clubData';
 import { useToast } from './ToastContext';
 
 const ClubDataContext = createContext(null);
@@ -9,432 +13,287 @@ const ClubDataContext = createContext(null);
 export const ClubDataProvider = ({ children }) => {
   const { showToast } = useToast();
 
-  const [members, setMembers] = useState([]);
+  const [slides, setSlides] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [events, setEvents] = useState([]);
   const [gallery, setGallery] = useState([]);
-  const [news, setNews] = useState([]);
-  const [team, setTeam] = useState([]);
+  const [members, setMembers] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [news] = useState(defaultNews);
+  const [team] = useState(defaultTeam);
+  const [services] = useState(defaultServices);
+  const [favourites, setFavourites] = useState(() => eventService.getFavourites());
+  const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] = useState({
-    members: false,
-    events: false,
-    gallery: false,
-    news: false,
-    team: false,
-    requests: false
-  });
+  const fetchAllData = useCallback(async () => {
+    try {
+      const [sList, pList, eList, gList, mList, rList] = await Promise.all([
+        sliderService.getSlides(),
+        programService.getPrograms(),
+        eventService.getEvents(),
+        galleryService.getPhotos(),
+        memberService.getMembers(),
+        memberService.getRequests(),
+      ]);
 
-  // Initialize and load all data on mount
-  useEffect(() => {
-    initDb();
-    refreshAll();
+      setSlides(sList);
+      setPrograms(pList);
+      setEvents(eList);
+      setGallery(gList);
+      setMembers(mList);
+      setRequests(rList);
+    } catch (err) {
+      console.error('Error loading club data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refreshAll = () => {
-    fetchMembers();
-    fetchEvents();
-    fetchGallery();
-    fetchNews();
-    fetchTeam();
-    fetchRequests();
-  };
+  useEffect(() => {
+    let isMounted = true;
+    const loadInit = async () => {
+      try {
+        const [sList, pList, eList, gList, mList, rList] = await Promise.all([
+          sliderService.getSlides(),
+          programService.getPrograms(),
+          eventService.getEvents(),
+          galleryService.getPhotos(),
+          memberService.getMembers(),
+          memberService.getRequests(),
+        ]);
 
-  // ---------------- MEMBERS ACTIONS ----------------
-  const fetchMembers = async () => {
-    setLoading(prev => ({ ...prev, members: true }));
-    try {
-      const res = await api.members.getAll();
-      setMembers(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to fetch members list', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, members: false }));
-    }
-  };
-
-  const createMember = async (memberData) => {
-    setLoading(prev => ({ ...prev, members: true }));
-    try {
-      const res = await api.members.create(memberData);
-      setMembers(prev => [res.data, ...prev]);
-      showToast('Member created successfully!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to create member', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, members: false }));
-    }
-  };
-
-  const updateMember = async (id, memberData) => {
-    setLoading(prev => ({ ...prev, members: true }));
-    try {
-      const res = await api.members.update(id, memberData);
-      setMembers(prev => prev.map(m => m.id === id ? res.data : m));
-      showToast('Member profile updated!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to update member', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, members: false }));
-    }
-  };
-
-  const deleteMember = async (id) => {
-    setLoading(prev => ({ ...prev, members: true }));
-    try {
-      await api.members.delete(id);
-      setMembers(prev => prev.filter(m => m.id !== id));
-      showToast('Member deleted successfully', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to delete member', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, members: false }));
-    }
-  };
-
-  // ---------------- EVENTS ACTIONS ----------------
-  const fetchEvents = async () => {
-    setLoading(prev => ({ ...prev, events: true }));
-    try {
-      const res = await api.events.getAll();
-      setEvents(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to fetch events list', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, events: false }));
-    }
-  };
-
-  const createEvent = async (eventData) => {
-    setLoading(prev => ({ ...prev, events: true }));
-    try {
-      const res = await api.events.create(eventData);
-      setEvents(prev => [res.data, ...prev]);
-      showToast('Event created successfully!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to create event', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, events: false }));
-    }
-  };
-
-  const updateEvent = async (id, eventData) => {
-    setLoading(prev => ({ ...prev, events: true }));
-    try {
-      const res = await api.events.update(id, eventData);
-      setEvents(prev => prev.map(e => e.id === id ? res.data : e));
-      showToast('Event updated successfully!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to update event', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, events: false }));
-    }
-  };
-
-  const deleteEvent = async (id) => {
-    setLoading(prev => ({ ...prev, events: true }));
-    try {
-      await api.events.delete(id);
-      setEvents(prev => prev.filter(e => e.id !== id));
-      showToast('Event removed successfully', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to delete event', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, events: false }));
-    }
-  };
-
-  const registerForEvent = async (eventId, registrationData) => {
-    setLoading(prev => ({ ...prev, events: true }));
-    try {
-      const res = await api.events.register(eventId, registrationData);
-      setEvents(prev => prev.map(e => e.id === eventId ? res.data : e));
-      showToast('Registered for event successfully!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast(err.message || 'Registration failed', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, events: false }));
-    }
-  };
-
-  // ---------------- GALLERY ACTIONS ----------------
-  const fetchGallery = async () => {
-    setLoading(prev => ({ ...prev, gallery: true }));
-    try {
-      const res = await api.gallery.getAll();
-      setGallery(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to load gallery items', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, gallery: false }));
-    }
-  };
-
-  const createGalleryItem = async (itemData) => {
-    setLoading(prev => ({ ...prev, gallery: true }));
-    try {
-      const res = await api.gallery.create(itemData);
-      setGallery(prev => [res.data, ...prev]);
-      showToast('Gallery media item added!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to add gallery item', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, gallery: false }));
-    }
-  };
-
-  const deleteGalleryItem = async (id) => {
-    setLoading(prev => ({ ...prev, gallery: true }));
-    try {
-      await api.gallery.delete(id);
-      setGallery(prev => prev.filter(g => g.id !== id));
-      showToast('Media item removed', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to delete item', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, gallery: false }));
-    }
-  };
-
-  // ---------------- NEWS ACTIONS ----------------
-  const fetchNews = async () => {
-    setLoading(prev => ({ ...prev, news: true }));
-    try {
-      const res = await api.news.getAll();
-      setNews(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to fetch announcements', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, news: false }));
-    }
-  };
-
-  const createNews = async (newsData) => {
-    setLoading(prev => ({ ...prev, news: true }));
-    try {
-      const res = await api.news.create(newsData);
-      setNews(prev => [res.data, ...prev]);
-      showToast('Announcement posted!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to post announcement', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, news: false }));
-    }
-  };
-
-  const updateNews = async (id, newsData) => {
-    setLoading(prev => ({ ...prev, news: true }));
-    try {
-      const res = await api.news.update(id, newsData);
-      setNews(prev => prev.map(n => n.id === id ? res.data : n));
-      showToast('Announcement edited!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to update announcement', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, news: false }));
-    }
-  };
-
-  const deleteNews = async (id) => {
-    setLoading(prev => ({ ...prev, news: true }));
-    try {
-      await api.news.delete(id);
-      setNews(prev => prev.filter(n => n.id !== id));
-      showToast('Announcement removed', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to delete news article', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, news: false }));
-    }
-  };
-
-  // ---------------- TEAM ACTIONS ----------------
-  const fetchTeam = async () => {
-    setLoading(prev => ({ ...prev, team: true }));
-    try {
-      const res = await api.team.getAll();
-      setTeam(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to fetch team members list', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, team: false }));
-    }
-  };
-
-  const createTeamMember = async (teamData) => {
-    setLoading(prev => ({ ...prev, team: true }));
-    try {
-      const res = await api.team.create(teamData);
-      setTeam(prev => [...prev, res.data]);
-      showToast('Team member added successfully!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to add team member', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, team: false }));
-    }
-  };
-
-  const updateTeamMember = async (id, teamData) => {
-    setLoading(prev => ({ ...prev, team: true }));
-    try {
-      const res = await api.team.update(id, teamData);
-      setTeam(prev => prev.map(t => t.id === id ? res.data : t));
-      showToast('Team member details updated!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to update team details', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, team: false }));
-    }
-  };
-
-  const deleteTeamMember = async (id) => {
-    setLoading(prev => ({ ...prev, team: true }));
-    try {
-      await api.team.delete(id);
-      setTeam(prev => prev.filter(t => t.id !== id));
-      showToast('Team member removed', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to remove team member', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, team: false }));
-    }
-  };
-
-  // ---------------- MEMBERSHIP REQUESTS ACTIONS ----------------
-  const fetchRequests = async () => {
-    setLoading(prev => ({ ...prev, requests: true }));
-    try {
-      const res = await api.requests.getAll();
-      setRequests(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to fetch requests', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, requests: false }));
-    }
-  };
-
-  const createMembershipRequest = async (requestData) => {
-    setLoading(prev => ({ ...prev, requests: true }));
-    try {
-      const res = await api.requests.create(requestData);
-      setRequests(prev => [res.data, ...prev]);
-      showToast('Registration request submitted!', 'success');
-      return res.data;
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to submit application', 'error');
-      throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, requests: false }));
-    }
-  };
-
-  const updateRequestStatus = async (id, status) => {
-    setLoading(prev => ({ ...prev, requests: true }));
-    try {
-      const res = await api.requests.updateStatus(id, status);
-      setRequests(prev => prev.map(r => r.id === id ? res.data : r));
-      
-      if (status === 'Approved') {
-        showToast('Application approved! Added to members.', 'success');
-        // Refresh members list to show newly approved member
-        fetchMembers();
-      } else {
-        showToast('Application marked as rejected', 'info');
+        if (isMounted) {
+          setSlides(sList);
+          setPrograms(pList);
+          setEvents(eList);
+          setGallery(gList);
+          setMembers(mList);
+          setRequests(rList);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error loading club data:', err);
+        if (isMounted) setLoading(false);
       }
-      return res.data;
+    };
+    loadInit();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Favourites helper
+  const toggleFavourite = (eventId) => {
+    const updated = eventService.toggleFavourite(eventId);
+    setFavourites(updated);
+    const isNowFav = updated.includes(eventId);
+    showToast(isNowFav ? 'Added to your saved events' : 'Removed from saved events', 'info');
+  };
+
+  const isFavourite = (eventId) => {
+    return favourites.includes(eventId);
+  };
+
+  // Membership Actions
+  const applyForMembership = async (formData, currentUser) => {
+    try {
+      const newReq = await memberService.submitApplication(formData, currentUser);
+      await fetchAllData();
+      showToast('Application submitted successfully! Our team will review it shortly.', 'success');
+      return newReq;
     } catch (err) {
-      console.error(err);
-      showToast('Failed to update status', 'error');
+      showToast(err.message || 'Failed to submit application', 'error');
       throw err;
-    } finally {
-      setLoading(prev => ({ ...prev, requests: false }));
     }
   };
 
-  const deleteRequest = async (id) => {
-    setLoading(prev => ({ ...prev, requests: true }));
+  const approveRequest = async (requestId, adminName) => {
     try {
-      await api.requests.delete(id);
-      setRequests(prev => prev.filter(r => r.id !== id));
-      showToast('Application deleted successfully', 'success');
+      const approved = await memberService.approveApplication(requestId, adminName);
+      await fetchAllData();
+      showToast(`Membership ${approved.membershipId} issued and approved!`, 'success');
+      return approved;
     } catch (err) {
-      console.error(err);
-      showToast('Failed to delete request', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, requests: false }));
+      showToast(err.message || 'Failed to approve request', 'error');
+      throw err;
+    }
+  };
+
+  const rejectRequest = async (requestId, adminName) => {
+    try {
+      await memberService.rejectApplication(requestId, adminName);
+      await fetchAllData();
+      showToast('Application marked as rejected.', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to reject request', 'error');
+      throw err;
+    }
+  };
+
+  const renewMemberRecord = async (memberId, adminName) => {
+    try {
+      const renewed = await memberService.renewMember(memberId, adminName);
+      await fetchAllData();
+      showToast(`Membership extended by 1 year until ${new Date(renewed.expiryDate).toLocaleDateString()}!`, 'success');
+      return renewed;
+    } catch (err) {
+      showToast(err.message || 'Failed to renew membership', 'error');
+      throw err;
+    }
+  };
+
+  const addManualMember = async (formData, adminName) => {
+    try {
+      const added = await memberService.addExistingMember(formData, adminName);
+      await fetchAllData();
+      showToast(`Member ${added.membershipId} record created successfully!`, 'success');
+      return added;
+    } catch (err) {
+      showToast(err.message || 'Failed to add member', 'error');
+      throw err;
+    }
+  };
+
+  const linkMember = async (memberId, targetUser) => {
+    try {
+      const linked = await memberService.linkMemberToUser(memberId, targetUser);
+      await fetchAllData();
+      showToast(`Account linked to ${targetUser.email || targetUser.name}!`, 'success');
+      return linked;
+    } catch (err) {
+      showToast(err.message || 'Failed to link account', 'error');
+      throw err;
+    }
+  };
+
+  const unlinkMember = async (memberId) => {
+    try {
+      const unlinked = await memberService.unlinkMember(memberId);
+      await fetchAllData();
+      showToast('Account unlinked successfully.', 'info');
+      return unlinked;
+    } catch (err) {
+      showToast(err.message || 'Failed to unlink account', 'error');
+      throw err;
+    }
+  };
+
+  // Slider CMS Actions
+  const addSlide = async (slideData) => {
+    try {
+      const slide = await sliderService.createSlide(slideData);
+      await fetchAllData();
+      showToast('Hero slide created successfully!', 'success');
+      return slide;
+    } catch (err) {
+      showToast(err.message || 'Failed to create slide', 'error');
+      throw err;
+    }
+  };
+
+  const toggleSlideStatus = async (slideId) => {
+    try {
+      await sliderService.toggleSlideActive(slideId);
+      await fetchAllData();
+      showToast('Slide visibility updated!', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to update slide', 'error');
+      throw err;
+    }
+  };
+
+  const removeSlide = async (slideId) => {
+    try {
+      await sliderService.deleteSlide(slideId);
+      await fetchAllData();
+      showToast('Slide deleted.', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to delete slide', 'error');
+      throw err;
+    }
+  };
+
+  // Program CMS Actions
+  const addProgram = async (programData) => {
+    try {
+      const prog = await programService.createProgram(programData);
+      await fetchAllData();
+      showToast('Program published successfully!', 'success');
+      return prog;
+    } catch (err) {
+      showToast(err.message || 'Failed to publish program', 'error');
+      throw err;
+    }
+  };
+
+  const removeProgram = async (programId) => {
+    try {
+      await programService.deleteProgram(programId);
+      await fetchAllData();
+      showToast('Program removed.', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to remove program', 'error');
+      throw err;
+    }
+  };
+
+  // Gallery CMS Actions
+  const addGalleryPhoto = async (photoData, author) => {
+    try {
+      const photo = await galleryService.createPhoto(photoData, author);
+      await fetchAllData();
+      showToast('Photo uploaded to gallery!', 'success');
+      return photo;
+    } catch (err) {
+      showToast(err.message || 'Failed to upload photo', 'error');
+      throw err;
+    }
+  };
+
+  const removeGalleryPhoto = async (photoId) => {
+    try {
+      await galleryService.deletePhoto(photoId);
+      await fetchAllData();
+      showToast('Photo deleted from gallery.', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to delete photo', 'error');
+      throw err;
     }
   };
 
   return (
     <ClubDataContext.Provider
       value={{
-        members,
+        clubInfo,
+        slides,
+        programs,
         events,
         gallery,
+        members,
+        requests,
         news,
         team,
-        requests,
+        services,
         loading,
-        createMember,
-        updateMember,
-        deleteMember,
-        createEvent,
-        updateEvent,
-        deleteEvent,
-        registerForEvent,
-        createGalleryItem,
-        deleteGalleryItem,
-        createNews,
-        updateNews,
-        deleteNews,
-        createTeamMember,
-        updateTeamMember,
-        deleteTeamMember,
-        createMembershipRequest,
-        updateRequestStatus,
-        deleteRequest
+        fetchAllData,
+        // Favourites
+        favourites,
+        toggleFavourite,
+        isFavourite,
+        // Membership
+        applyForMembership,
+        approveRequest,
+        rejectRequest,
+        renewMemberRecord,
+        addManualMember,
+        linkMember,
+        unlinkMember,
+        // CMS
+        addSlide,
+        toggleSlideStatus,
+        removeSlide,
+        addProgram,
+        removeProgram,
+        addGalleryPhoto,
+        removeGalleryPhoto
       }}
     >
       {children}

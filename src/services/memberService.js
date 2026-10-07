@@ -1,132 +1,118 @@
-// Membership Service
-// Implements exact approval pipeline, sequential CLUB-XXXXXX ID generation, 1-year expiry calculation,
-// renewals, old record transcription, and user-to-member account linking.
+// Membership Service — Firestore `members` + `counters/membershipCounter` (shared with the mobile app)
+//
+// Same model as the app: an application is a `members` document with status 'pending';
+// approval turns it into a member (status 'approved', CLUB-XXXXXX number, 1-year expiry).
+// Membership numbers come from the shared atomic counter so the app and the website never
+// hand out the same number.
 
-import { db, isFirebaseConfigured } from '../config/firebase';
-import { initialMembers, initialRequests } from '../data/clubData';
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  serverTimestamp
-} from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { doc, runTransaction } from 'firebase/firestore';
+import { store, useCloud, serverTimestamp } from './store';
 
-const MEMBERS_KEY = 'universal_club_members_store';
-const REQUESTS_KEY = 'universal_club_requests_store';
-const COUNTER_KEY = 'universal_club_member_counter';
+const MEMBERS = 'members';
+const USERS = 'users';
+const COUNTER_DOC = ['counters', 'membershipCounter'];
+const LOCAL_COUNTER_KEY = 'universal_club_member_counter';
 
-// Local storage helpers
-const loadLocal = (key, defaultVal) => {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : defaultVal;
-  } catch (err) {
-    return defaultVal;
-  }
-};
+const DEFAULT_PHOTO = '';
 
-const saveLocal = (key, val) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch (err) {
-    console.error(`Failed to save storage key: ${key}`, err);
-  }
-};
-
-/**
- * Calculates 1-year expiry date (365 days) from a base date
- */
 export function calculateOneYearExpiry(baseDate = new Date()) {
   const date = new Date(baseDate);
   date.setFullYear(date.getFullYear() + 1);
   return date.toISOString();
 }
 
-/**
- * Generates the next sequential CLUB-XXXXXX ID
- */
-export function getNextMembershipId() {
-  const currentCount = Number(localStorage.getItem(COUNTER_KEY) || initialMembers.length);
-  const nextCount = currentCount + 1;
-  localStorage.setItem(COUNTER_KEY, String(nextCount));
-  return `CLUB-${String(nextCount).padStart(6, '0')}`;
+const formatMembershipId = (n) => `CLUB-${String(n).padStart(6, '0')}`;
+
+/** Atomically reserves the next CLUB-XXXXXX number */
+async function nextMembershipId() {
+  if (useCloud) {
+    const ref = doc(db, ...COUNTER_DOC);
+    const next = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const n = (snap.exists() ? Number(snap.data().currentNumber) || 0 : 0) + 1;
+      tx.set(ref, { currentNumber: n }, { merge: true });
+      return n;
+    });
+    return formatMembershipId(next);
+  }
+  const n = Number(localStorage.getItem(LOCAL_COUNTER_KEY) || 0) + 1;
+  localStorage.setItem(LOCAL_COUNTER_KEY, String(n));
+  return formatMembershipId(n);
 }
 
+const norm = (s) => String(s || '').toLowerCase().trim();
+const digits = (s) => String(s || '').replace(/\D/g, '');
+
+/** Mirrors membership state onto the linked user's profile (users/{uid}), like the app does */
+async function syncLinkedUser(userId, patch) {
+  if (!userId) return;
+  try {
+    await store.set(USERS, userId, { ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (err) {
+    console.warn('Could not update linked user profile:', err.message);
+  }
+}
+
+const isApplication = (m) => m.status === 'pending' || m.status === 'rejected' || m.source === 'new_application';
+const isMemberRecord = (m) => m.status === 'approved' || m.status === 'expired';
+
 export const memberService = {
-  /**
-   * Fetch all members
-   */
-  getMembers: async () => {
-    if (isFirebaseConfigured && db) {
-      try {
-        const snap = await getDocs(collection(db, 'members'));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (list.length > 0) return list;
-      } catch (err) {
-        console.warn('Firestore getMembers fallback to local:', err.message);
-      }
-    }
-    return loadLocal(MEMBERS_KEY, initialMembers);
-  },
+  /** Every document in `members` (applications and members) */
+  getAll: () => store.list(MEMBERS),
+
+  /** Approved / expired members */
+  getMembers: async () => (await store.list(MEMBERS)).filter(isMemberRecord),
+
+  /** Applications (pending, rejected, and approved ones that came in online) */
+  getRequests: async () =>
+    (await store.list(MEMBERS))
+      .filter(isApplication)
+      .sort((a, b) => String(b.appliedAt || '').localeCompare(String(a.appliedAt || ''))),
 
   /**
-   * Fetch all membership applications / requests
+   * Public "verify a member" lookup by exact membership ID, email or phone.
+   * Queries only the matching document instead of downloading the whole member list.
    */
-  getRequests: async () => {
-    if (isFirebaseConfigured && db) {
-      try {
-        const snap = await getDocs(collection(db, 'membership_requests'));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (list.length > 0) return list;
-      } catch (err) {
-        console.warn('Firestore getRequests fallback to local:', err.message);
-      }
+  lookup: async (rawQuery) => {
+    const q = String(rawQuery || '').trim();
+    if (!q) return null;
+    const attempts = /^club-/i.test(q)
+      ? [['membershipId', q.toUpperCase()], ['membershipNumber', q.toUpperCase()]]
+      : q.includes('@')
+        ? [['email', q], ['email', q.toLowerCase()]]
+        : [['phone', digits(q)], ['mobile', digits(q)]];
+    for (const [field, value] of attempts) {
+      const hit = (await store.findBy(MEMBERS, field, value)).find(isMemberRecord);
+      if (hit) return hit;
     }
-    return loadLocal(REQUESTS_KEY, initialRequests);
+    return null;
   },
 
-  /**
-   * Submit a new membership application
-   */
   submitApplication: async (formData, currentUser = null) => {
-    const allRequests = loadLocal(REQUESTS_KEY, initialRequests);
-    const allMembers = loadLocal(MEMBERS_KEY, initialMembers);
+    const all = await store.list(MEMBERS);
+    const email = norm(formData.email);
+    const phone = digits(formData.phone || formData.mobile);
+    const matches = (m) => (email && norm(m.email) === email) || (phone && digits(m.phone || m.mobile) === phone);
 
-    // Validate non-duplicate
-    const emailToCheck = (formData.email || '').toLowerCase().trim();
-    const phoneToCheck = (formData.phone || formData.mobile || '').trim();
-
-    const existingReq = allRequests.find(r => 
-      r.status === 'pending' && 
-      (r.email.toLowerCase() === emailToCheck || r.phone === phoneToCheck)
-    );
-    if (existingReq) {
+    if (all.some((m) => m.status === 'pending' && matches(m))) {
       throw new Error('An application is already pending review with this email or phone number.');
     }
-
-    const existingMember = allMembers.find(m => 
-      m.status === 'approved' && 
-      (m.email.toLowerCase() === emailToCheck || m.phone === phoneToCheck)
-    );
-    if (existingMember) {
+    if (all.some((m) => m.status === 'approved' && matches(m))) {
       throw new Error('An active membership record already exists for this member.');
     }
 
-    const newDocId = `req_${Date.now()}`;
+    const id = currentUser?.uid ? `mem_${currentUser.uid}` : `mem_${phone || 'manual'}_${Date.now()}`;
     const nowIso = new Date().toISOString();
+    const name = formData.name || formData.fullName;
+    const photo = formData.photoURL || formData.profilePhoto || DEFAULT_PHOTO;
 
-    const newRequest = {
-      id: newDocId,
-      documentId: newDocId,
-      userId: currentUser ? currentUser.uid : null,
-      name: formData.name || formData.fullName,
-      fullName: formData.name || formData.fullName,
+    const application = {
+      id,
+      documentId: id,
+      userId: currentUser?.uid || null,
+      name,
+      fullName: name,
       email: formData.email,
       phone: formData.phone || formData.mobile,
       mobile: formData.phone || formData.mobile,
@@ -134,270 +120,139 @@ export const memberService = {
       gender: formData.gender || 'Male',
       bloodGroup: formData.bloodGroup || '',
       address: formData.address || '',
-      photoURL: formData.photoURL || formData.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
-      profilePhoto: formData.photoURL || formData.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
+      photoURL: photo,
+      profilePhoto: photo,
       authProvider: currentUser ? 'google' : 'manual',
       source: 'new_application',
       status: 'pending',
+      membershipId: null,
+      membershipNumber: null,
       membershipType: '1 Year Membership',
       appliedAt: nowIso,
       createdAt: nowIso,
+      updatedAt: nowIso,
+      appliedAtServer: serverTimestamp(),
+      createdAtServer: serverTimestamp(),
     };
 
-    allRequests.unshift(newRequest);
-    saveLocal(REQUESTS_KEY, allRequests);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await setDoc(doc(db, 'membership_requests', newDocId), {
-          ...newRequest,
-          createdAtServer: serverTimestamp()
-        });
-      } catch (err) {
-        console.warn('Firestore write request fallback:', err.message);
-      }
-    }
-
-    return newRequest;
+    await store.set(MEMBERS, id, application);
+    await syncLinkedUser(application.userId, { membershipStatus: 'pending' });
+    return application;
   },
 
-  /**
-   * Approve a pending application: generates CLUB-XXXXXX ID, sets 1-year expiry
-   */
-  approveApplication: async (requestId, adminName = 'Administrator') => {
-    const allRequests = loadLocal(REQUESTS_KEY, initialRequests);
-    const allMembers = loadLocal(MEMBERS_KEY, initialMembers);
+  approveApplication: async (memberDocId, adminName = 'Administrator') => {
+    const application = await store.get(MEMBERS, memberDocId);
+    if (!application) throw new Error('Application not found.');
 
-    const reqIndex = allRequests.findIndex(r => r.id === requestId || r.documentId === requestId);
-    if (reqIndex === -1) throw new Error('Application request not found.');
-
-    const targetReq = allRequests[reqIndex];
-    const membershipNumber = targetReq.membershipId || getNextMembershipId();
+    const membershipId = application.membershipId || (await nextMembershipId());
     const now = new Date();
-    const joiningDate = now.toISOString();
-    const expiryDate = calculateOneYearExpiry(now);
-
-    // Update request state
-    targetReq.status = 'approved';
-    targetReq.approvedAt = joiningDate;
-    targetReq.approvedBy = adminName;
-    targetReq.membershipId = membershipNumber;
-    targetReq.membershipNumber = membershipNumber;
-    allRequests[reqIndex] = targetReq;
-    saveLocal(REQUESTS_KEY, allRequests);
-
-    // Create / update member record
-    const memberDocId = `mem_${targetReq.id}`;
-    const newMemberRecord = {
-      ...targetReq,
-      id: memberDocId,
-      documentId: memberDocId,
+    const patch = {
       status: 'approved',
-      membershipId: membershipNumber,
-      membershipNumber: membershipNumber,
+      membershipId,
+      membershipNumber: membershipId,
       membershipType: '1 Year Membership',
-      joiningDate,
-      expiryDate,
-      approvedAt: joiningDate,
+      joiningDate: now.toISOString(),
+      expiryDate: calculateOneYearExpiry(now),
+      approvedAt: now.toISOString(),
       approvedBy: adminName,
+      rejectedAt: null,
+      updatedAt: now.toISOString(),
     };
 
-    const existingMemberIdx = allMembers.findIndex(m => m.email.toLowerCase() === targetReq.email.toLowerCase());
-    if (existingMemberIdx >= 0) {
-      allMembers[existingMemberIdx] = newMemberRecord;
-    } else {
-      allMembers.unshift(newMemberRecord);
-    }
-    saveLocal(MEMBERS_KEY, allMembers);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await updateDoc(doc(db, 'membership_requests', targetReq.id), {
-          status: 'approved',
-          membershipId: membershipNumber,
-          approvedAt: joiningDate,
-          approvedBy: adminName,
-        });
-        await setDoc(doc(db, 'members', memberDocId), newMemberRecord);
-      } catch (err) {
-        console.warn('Firestore approve fallback:', err.message);
-      }
-    }
-
-    return newMemberRecord;
+    await store.update(MEMBERS, memberDocId, patch);
+    await syncLinkedUser(application.userId, { membershipStatus: 'approved', membershipId });
+    return { ...application, ...patch };
   },
 
-  /**
-   * Reject a membership application
-   */
-  rejectApplication: async (requestId, adminName = 'Administrator') => {
-    const allRequests = loadLocal(REQUESTS_KEY, initialRequests);
-    const reqIndex = allRequests.findIndex(r => r.id === requestId || r.documentId === requestId);
-    if (reqIndex === -1) throw new Error('Application request not found.');
+  rejectApplication: async (memberDocId, adminName = 'Administrator') => {
+    const application = await store.get(MEMBERS, memberDocId);
+    if (!application) throw new Error('Application not found.');
 
     const nowIso = new Date().toISOString();
-    allRequests[reqIndex].status = 'rejected';
-    allRequests[reqIndex].rejectedAt = nowIso;
-    allRequests[reqIndex].rejectedBy = adminName;
-    saveLocal(REQUESTS_KEY, allRequests);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await updateDoc(doc(db, 'membership_requests', requestId), {
-          status: 'rejected',
-          rejectedAt: nowIso,
-          rejectedBy: adminName,
-        });
-      } catch (err) {
-        console.warn('Firestore reject fallback:', err.message);
-      }
-    }
-
-    return allRequests[reqIndex];
+    const patch = { status: 'rejected', rejectedAt: nowIso, rejectedBy: adminName, updatedAt: nowIso };
+    await store.update(MEMBERS, memberDocId, patch);
+    await syncLinkedUser(application.userId, { membershipStatus: 'rejected' });
+    return { ...application, ...patch };
   },
 
-  /**
-   * Renew an active or expired member for +1 Year
-   */
-  renewMember: async (memberId, adminName = 'Administrator') => {
-    const allMembers = loadLocal(MEMBERS_KEY, initialMembers);
-    const memberIndex = allMembers.findIndex(m => m.id === memberId || m.documentId === memberId);
-    if (memberIndex === -1) throw new Error('Member record not found.');
+  renewMember: async (memberDocId) => {
+    const member = await store.get(MEMBERS, memberDocId);
+    if (!member) throw new Error('Member record not found.');
 
-    const member = allMembers[memberIndex];
-    const currentExpiry = member.expiryDate ? new Date(member.expiryDate) : new Date();
     const now = new Date();
+    const currentExpiry = member.expiryDate ? new Date(member.expiryDate) : now;
+    // Extend from the current expiry if still active, otherwise from today
+    const expiryDate = calculateOneYearExpiry(currentExpiry > now ? currentExpiry : now);
+    const patch = { expiryDate, status: 'approved', renewedAt: now.toISOString(), updatedAt: now.toISOString() };
 
-    // If current expiry is in the future, extend from current expiry; otherwise extend from now
-    const baseDate = currentExpiry > now ? currentExpiry : now;
-    const newExpiryDate = calculateOneYearExpiry(baseDate);
-
-    member.expiryDate = newExpiryDate;
-    member.status = 'approved';
-    member.renewedAt = now.toISOString();
-    member.updatedAt = now.toISOString();
-    allMembers[memberIndex] = member;
-    saveLocal(MEMBERS_KEY, allMembers);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await updateDoc(doc(db, 'members', member.id), {
-          expiryDate: newExpiryDate,
-          status: 'approved',
-          renewedAt: now.toISOString(),
-          updatedAt: now.toISOString()
-        });
-      } catch (err) {
-        console.warn('Firestore renew fallback:', err.message);
-      }
-    }
-
-    return member;
+    await store.update(MEMBERS, memberDocId, patch);
+    await syncLinkedUser(member.userId, { membershipStatus: 'approved', membershipId: member.membershipId });
+    return { ...member, ...patch };
   },
 
-  /**
-   * Manually add an existing offline/paper member record
-   */
+  /** Transcribe an existing paper / offline member */
   addExistingMember: async (formData, adminName = 'Administrator') => {
-    const allMembers = loadLocal(MEMBERS_KEY, initialMembers);
-    const membershipNumber = formData.membershipNumber || formData.membershipId || getNextMembershipId();
+    const requestedId = (formData.membershipNumber || formData.membershipId || '').trim().toUpperCase();
+    if (requestedId) {
+      const all = await store.list(MEMBERS);
+      if (all.some((m) => norm(m.membershipId) === norm(requestedId))) {
+        throw new Error(`Membership ID ${requestedId} is already in use.`);
+      }
+    }
+    const membershipId = requestedId || (await nextMembershipId());
     const joiningDate = formData.joiningDate ? new Date(formData.joiningDate).toISOString() : new Date().toISOString();
-    const expiryDate = calculateOneYearExpiry(new Date(joiningDate));
     const nowIso = new Date().toISOString();
+    const phone = digits(formData.phone || formData.mobile);
+    const id = `mem_${phone || 'manual'}_${Date.now()}`;
+    const name = formData.name || formData.fullName;
+    const photo = formData.photoURL || formData.profilePhoto || DEFAULT_PHOTO;
 
-    const docId = `mem_manual_${Date.now()}`;
-    const newMember = {
-      id: docId,
-      documentId: docId,
+    return store.set(MEMBERS, id, {
+      id,
+      documentId: id,
       userId: null,
-      name: formData.name || formData.fullName,
-      fullName: formData.name || formData.fullName,
-      email: formData.email,
-      phone: formData.phone || formData.mobile,
-      mobile: formData.phone || formData.mobile,
+      name,
+      fullName: name,
+      email: formData.email || '',
+      phone: formData.phone || formData.mobile || '',
+      mobile: formData.phone || formData.mobile || '',
       dateOfBirth: formData.dateOfBirth || '',
       gender: formData.gender || 'Male',
       bloodGroup: formData.bloodGroup || '',
       address: formData.address || '',
-      photoURL: formData.photoURL || formData.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
-      profilePhoto: formData.photoURL || formData.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
+      photoURL: photo,
+      profilePhoto: photo,
       authProvider: 'manual',
       source: 'old_record',
       status: 'approved',
-      membershipId: membershipNumber,
-      membershipNumber: membershipNumber,
+      membershipId,
+      membershipNumber: membershipId,
       membershipType: '1 Year Membership',
       joiningDate,
-      expiryDate,
+      expiryDate: calculateOneYearExpiry(new Date(joiningDate)),
       approvedAt: nowIso,
       approvedBy: adminName,
+      appliedAt: nowIso,
       createdAt: nowIso,
-    };
-
-    allMembers.unshift(newMember);
-    saveLocal(MEMBERS_KEY, allMembers);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await setDoc(doc(db, 'members', docId), newMember);
-      } catch (err) {
-        console.warn('Firestore addExistingMember fallback:', err.message);
-      }
-    }
-
-    return newMember;
+      updatedAt: nowIso,
+      createdAtServer: serverTimestamp(),
+    });
   },
 
-  /**
-   * Link an existing member record to a Google registered user account
-   */
-  linkMemberToUser: async (memberId, targetUser) => {
-    const allMembers = loadLocal(MEMBERS_KEY, initialMembers);
-    const memberIndex = allMembers.findIndex(m => m.id === memberId || m.documentId === memberId);
-    if (memberIndex === -1) throw new Error('Member not found.');
-
+  linkMemberToUser: async (memberDocId, targetUser) => {
+    const member = await store.get(MEMBERS, memberDocId);
+    if (!member) throw new Error('Member not found.');
     const nowIso = new Date().toISOString();
-    allMembers[memberIndex].userId = targetUser.uid;
-    allMembers[memberIndex].linkedAt = nowIso;
-    saveLocal(MEMBERS_KEY, allMembers);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await updateDoc(doc(db, 'members', allMembers[memberIndex].id), {
-          userId: targetUser.uid,
-          linkedAt: nowIso,
-        });
-      } catch (err) {
-        console.warn('Firestore link fallback:', err.message);
-      }
-    }
-
-    return allMembers[memberIndex];
+    await store.update(MEMBERS, memberDocId, { userId: targetUser.uid, linkedAt: nowIso, updatedAt: nowIso });
+    await syncLinkedUser(targetUser.uid, { membershipStatus: member.status, membershipId: member.membershipId || null });
+    return { ...member, userId: targetUser.uid, linkedAt: nowIso };
   },
 
-  /**
-   * Unlink a member record from a user
-   */
-  unlinkMember: async (memberId) => {
-    const allMembers = loadLocal(MEMBERS_KEY, initialMembers);
-    const memberIndex = allMembers.findIndex(m => m.id === memberId || m.documentId === memberId);
-    if (memberIndex === -1) throw new Error('Member not found.');
-
-    allMembers[memberIndex].userId = null;
-    allMembers[memberIndex].linkedAt = null;
-    saveLocal(MEMBERS_KEY, allMembers);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await updateDoc(doc(db, 'members', allMembers[memberIndex].id), {
-          userId: null,
-          linkedAt: null,
-        });
-      } catch (err) {
-        console.warn('Firestore unlink fallback:', err.message);
-      }
-    }
-
-    return allMembers[memberIndex];
-  }
+  unlinkMember: async (memberDocId) => {
+    const member = await store.get(MEMBERS, memberDocId);
+    if (!member) throw new Error('Member not found.');
+    await store.update(MEMBERS, memberDocId, { userId: null, linkedAt: null, updatedAt: new Date().toISOString() });
+    await syncLinkedUser(member.userId, { membershipStatus: 'not_applied', membershipId: null });
+    return { ...member, userId: null, linkedAt: null };
+  },
 };

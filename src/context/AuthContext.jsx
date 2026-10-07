@@ -1,106 +1,88 @@
 // Global Auth Context Provider
+// With Firebase configured, Firebase Auth state is the source of truth: the cached session in
+// localStorage only paints the first frame and is replaced (or cleared) once Firebase reports
+// who is signed in — so editing localStorage can't grant admin access.
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import { useCloud } from '../services/store';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
+  // In cloud mode we wait for Firebase before trusting any session (ProtectedRoute shows a spinner)
+  const [authReady, setAuthReady] = useState(!useCloud);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!useCloud) return undefined;
+    return onAuthStateChanged(auth, async (fbUser) => {
+      try {
+        if (!fbUser) {
+          await authService.logout();
+          setUser(null);
+        } else {
+          setUser(await authService.resolveSession(fbUser));
+        }
+      } catch (err) {
+        console.error('Could not load your account:', err);
+        setUser(null);
+      } finally {
+        setAuthReady(true);
+      }
+    });
+  }, []);
 
   const refreshUser = useCallback(async () => {
     try {
+      if (useCloud) {
+        if (auth.currentUser) setUser(await authService.resolveSession(auth.currentUser));
+        return;
+      }
       const current = authService.getCurrentUser();
-      if (current) {
-        if (current.role === 'admin') {
-          setUser(current);
-        } else {
-          const synced = await authService.syncUserProfile(current);
-          setUser(synced);
-        }
-      } else {
-        setUser(null);
+      if (current && current.role !== 'admin') {
+        setUser(await authService.syncUserProfile(current));
       }
     } catch (err) {
       console.error('Error refreshing user session:', err);
     }
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    const initSession = async () => {
-      const current = authService.getCurrentUser();
-      if (current && isMounted) {
-        if (current.role === 'admin') {
-          setUser(current);
-        } else {
-          const synced = await authService.syncUserProfile(current);
-          if (isMounted) setUser(synced);
-        }
-      }
-    };
-    initSession();
-
-    // Listen for storage changes across tabs
-    const handleStorage = (e) => {
-      if (e.key === 'universal_club_auth_user' || e.key === 'universal_club_members_store') {
-        refreshUser();
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      isMounted = false;
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, [refreshUser]);
-
-  const loginWithGoogle = async () => {
+  const withLoading = async (fn) => {
     setLoading(true);
     try {
+      return await fn();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = () =>
+    withLoading(async () => {
       const loggedUser = await authService.signInWithGoogle();
       setUser(loggedUser);
       return loggedUser;
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  const loginWithMockGoogle = async (mockData) => {
-    setLoading(true);
-    try {
-      const loggedUser = await authService.signInWithMockGoogle(mockData);
-      setUser(loggedUser);
-      return loggedUser;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loginAdmin = async (username, password) => {
-    setLoading(true);
-    try {
-      const adminUser = await authService.loginAdmin(username, password);
+  const loginAdmin = (email, password) =>
+    withLoading(async () => {
+      const adminUser = await authService.loginAdmin(email, password);
       setUser(adminUser);
       return adminUser;
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  const logout = async () => {
-    setLoading(true);
-    try {
+  const logout = () =>
+    withLoading(async () => {
       await authService.logout();
       setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
   const updateUserProfile = async (profileData) => {
-    if (!user) return;
+    if (!user) return undefined;
     const updated = await authService.updateProfile(user.uid || user.id, profileData);
-    setUser(updated);
+    setUser((prev) => ({ ...prev, ...updated }));
     return updated;
   };
 
@@ -121,13 +103,13 @@ export const AuthProvider = ({ children }) => {
         isPending,
         membershipStatus,
         memberData,
-        loading,
+        loading: loading || !authReady,
+        authReady,
         loginWithGoogle,
-        loginWithMockGoogle,
         loginAdmin,
         logout,
         updateUserProfile,
-        refreshUser
+        refreshUser,
       }}
     >
       {children}

@@ -1,175 +1,102 @@
-// Contact & Enquiry Form Page
-import React, { useState } from 'react';
-import { FiMapPin, FiPhone, FiMail, FiClock, FiSend, FiCheckCircle } from 'react-icons/fi';
+// Contact Page — the club's real public channels
+import React from 'react';
+import { FiMapPin, FiPhone, FiMail, FiClock, FiInstagram, FiFacebook, FiArrowUpRight } from 'react-icons/fi';
 import { useClubData } from '../context/ClubDataContext';
-import Button from '../components/ui/Button';
+
+function ChannelCard({ href, icon: Icon, label, value, note }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="glass rounded-[30px] p-6 sm:p-7 flex items-center gap-4 group"
+    >
+      <span className="w-14 h-14 rounded-full bg-white text-ember flex items-center justify-center text-2xl shrink-0">
+        <Icon />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">{label}</p>
+        <p className="font-display text-lg font-semibold text-ink truncate">{value}</p>
+        {note && <p className="text-xs text-ink-muted">{note}</p>}
+      </div>
+      <span className="w-11 h-11 rounded-full bg-white text-ember flex items-center justify-center shrink-0 group-hover:bg-ember group-hover:text-white transition-all">
+        <FiArrowUpRight />
+      </span>
+    </a>
+  );
+}
 
 export default function Contact() {
   const { clubInfo } = useClubData();
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
-      alert('Please complete all form fields.');
-      return;
-    }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-      setFormData({ name: '', email: '', message: '' });
-    }, 600);
-  };
+  const { socials } = clubInfo;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 animate-fade-in">
-      
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 animate-fade-in">
+
       {/* Header */}
-      <div className="text-center space-y-3 max-w-2xl mx-auto">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-700 border border-amber-400/30 text-xs font-black uppercase tracking-wider">
-          <FiMapPin /> Connect With USAC
-        </span>
-        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-          Get in Touch
+      <div className="max-w-2xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">Contact</p>
+        <h1 className="font-display text-4xl sm:text-5xl font-medium text-ink tracking-tight mt-2">
+          Say <span className="font-bold">hello</span>
         </h1>
-        <p className="text-sm text-slate-600 leading-relaxed">
-          Have queries about tournament registrations, synthetic court bookings, or membership verification? Drop us a message or visit our sports complex.
+        <p className="mt-4 text-sm sm:text-base text-ink-muted leading-relaxed">
+          Questions about membership, events or joining a team? The quickest way to reach the club is a message on
+          Instagram or Facebook.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Coordinates Card */}
-        <div className="lg:col-span-5 p-8 rounded-3xl bg-slate-950 text-white space-y-6 shadow-xl">
-          <h2 className="text-xl font-black text-white">Complex Coordinates</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <ChannelCard
+          href={socials.instagram}
+          icon={FiInstagram}
+          label="Instagram"
+          value={socials.instagramHandle}
+          note={`${clubInfo.instagramFollowers} followers · send a DM`}
+        />
+        <ChannelCard
+          href={socials.facebook}
+          icon={FiFacebook}
+          label="Facebook"
+          value="Universal Arts & Sports Club Vellur"
+          note="Message the page"
+        />
+      </div>
 
-          <div className="space-y-4 text-xs text-slate-300">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
-                <FiMapPin />
-              </div>
-              <div>
-                <strong className="text-white block font-bold mb-0.5">Physical Address</strong>
-                <span>{clubInfo.address}</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
-                <FiPhone />
-              </div>
-              <div>
-                <strong className="text-white block font-bold mb-0.5">Phone Enquiry</strong>
-                <a href={`tel:${clubInfo.phone}`} className="text-amber-400 hover:underline">
-                  {clubInfo.phone}
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-violet-500 text-white flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
-                <FiMail />
-              </div>
-              <div>
-                <strong className="text-white block font-bold mb-0.5">Official Email</strong>
-                <a href={`mailto:${clubInfo.email}`} className="text-amber-400 hover:underline">
-                  {clubInfo.email}
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#0FA968] text-white flex items-center justify-center text-lg shrink-0 mt-0.5 font-bold">
-                <FiClock />
-              </div>
-              <div>
-                <strong className="text-white block font-bold mb-0.5">Facility Hours</strong>
-                <p>Weekdays: {clubInfo.openingHours.weekdays}</p>
-                <p>Weekends: {clubInfo.openingHours.weekends}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-900 text-[11px] text-slate-400">
-            {clubInfo.affiliation}
+      <div className="glass rounded-[30px] p-6 sm:p-7 grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
+        <div className="flex items-start gap-3">
+          <FiMapPin className="text-ember text-lg mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-ink">Clubhouse</p>
+            <p className="text-ink-muted">{clubInfo.address}</p>
           </div>
         </div>
-
-        {/* Right Interactive Enquiry Form */}
-        <div className="lg:col-span-7 p-8 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-6">
-          <h2 className="text-xl font-black text-slate-900">Send an Online Enquiry</h2>
-
-          {submitted ? (
-            <div className="p-8 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3 animate-fade-in">
-              <FiCheckCircle className="text-4xl text-emerald-600 mx-auto" />
-              <h3 className="text-lg font-bold text-emerald-900">Message Received!</h3>
-              <p className="text-xs text-emerald-700 max-w-sm mx-auto">
-                Thank you for contacting Universal Club. A coordinator will respond to your enquiry shortly.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSubmitted(false)}
-              >
-                Send Another Message
-              </Button>
+        {clubInfo.phone && (
+          <div className="flex items-start gap-3">
+            <FiPhone className="text-ember text-lg mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-ink">Phone</p>
+              <a href={`tel:${clubInfo.phone}`} className="text-ink-muted hover:text-ink">{clubInfo.phone}</a>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="form-label">Your Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Full name"
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="name@gmail.com"
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Message / Question</label>
-                <textarea
-                  value={formData.message}
-                  onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                  placeholder="How can we help you regarding membership, coaching, or court bookings?"
-                  rows={4}
-                  className="form-textarea"
-                  required
-                />
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  variant="primary"
-                  size="md"
-                  type="submit"
-                  loading={loading}
-                  icon={FiSend}
-                >
-                  Send Message
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-
+          </div>
+        )}
+        {clubInfo.email && (
+          <div className="flex items-start gap-3">
+            <FiMail className="text-ember text-lg mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-ink">Email</p>
+              <a href={`mailto:${clubInfo.email}`} className="text-ink-muted hover:text-ink">{clubInfo.email}</a>
+            </div>
+          </div>
+        )}
+        {clubInfo.openingHours && (
+          <div className="flex items-start gap-3">
+            <FiClock className="text-ember text-lg mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-ink">Hours</p>
+              <p className="text-ink-muted">{clubInfo.openingHours}</p>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

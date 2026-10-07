@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import clubLogo from '../assets/club-logo.webp';
 
 export default function MemberLogin() {
-  const { loginWithGoogle, loginWithMockGoogle, user } = useAuth();
+  const { loginWithGoogle, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,17 +29,6 @@ export default function MemberLogin() {
     }
   };
 
-  const handleDemoSignIn = async (name, email) => {
-    setLoading(true);
-    try {
-      await loginWithMockGoogle({ name, email });
-      navigate('/membership');
-    } catch (err) {
-      alert('Sign-in failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 animate-fade-in">
@@ -66,7 +55,7 @@ export default function MemberLogin() {
           </div>
           <div className="flex items-center gap-2">
             <FiCheckCircle className="text-amber-500 text-sm shrink-0" />
-            <span>Priority access to tournaments & facilities</span>
+            <span>Apply for membership and track your application</span>
           </div>
           <div className="flex items-center gap-2">
             <FiCheckCircle className="text-amber-500 text-sm shrink-0" />
@@ -91,26 +80,6 @@ export default function MemberLogin() {
             <span>Continue with Google</span>
           </button>
 
-          {/* Quick Demo Sign-in buttons */}
-          <div className="pt-2 text-[11px] text-slate-400 space-y-1">
-            <p>Or test with sample accounts:</p>
-            <div className="flex justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleDemoSignIn('Alexander Wright', 'alex.wright@universalclub.com')}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[10px]"
-              >
-                Sample Member
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoSignIn('Rahul Krishnan', 'rahul.krishnan@gmail.com')}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[10px]"
-              >
-                Pending Applicant
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer Admin Link */}

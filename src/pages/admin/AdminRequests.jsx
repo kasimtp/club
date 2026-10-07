@@ -38,12 +38,12 @@ export default function AdminRequests() {
       {/* Header & Search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900">Membership Applications Queue</h1>
-          <p className="text-xs text-slate-400">Review incoming submissions, verify IDs, and approve official digital passes</p>
+          <h1 className="font-display text-xl font-bold text-ink">Membership Applications Queue</h1>
+          <p className="text-xs text-ink-subtle">Review incoming submissions, verify IDs, and approve official digital passes</p>
         </div>
 
         <div className="relative w-full md:w-80">
-          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle text-sm" />
           <input
             type="text"
             value={searchQuery}
@@ -74,12 +74,12 @@ export default function AdminRequests() {
       </div>
 
       {/* Queue Table */}
-      <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+      <div className="p-6 rounded-[30px] glass space-y-4">
         {filteredRequests.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+            <table className="w-full text-left text-xs text-ink">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-black/5 text-ink-subtle font-bold uppercase tracking-wider text-[10px]">
                   <th className="pb-3">Applicant</th>
                   <th className="pb-3">Contact</th>
                   <th className="pb-3">Applied Date</th>
@@ -88,21 +88,21 @@ export default function AdminRequests() {
                   <th className="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-black/5">
                 {filteredRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={req.id} className="hover:bg-white/50 transition-colors">
                     <td className="py-3.5 pr-3 flex items-center gap-3">
                       <Avatar src={req.photoURL || req.profilePhoto} name={req.name} size="md" />
                       <div>
-                        <span className="font-bold text-slate-900 block">{req.name || req.fullName}</span>
-                        <span className="text-[10px] text-slate-400">{req.gender} • Blood {req.bloodGroup || '—'}</span>
+                        <span className="font-bold text-ink block">{req.name || req.fullName}</span>
+                        <span className="text-[10px] text-ink-subtle">{req.gender} • Blood {req.bloodGroup || '—'}</span>
                       </div>
                     </td>
                     <td className="py-3.5 pr-3">
-                      <p className="font-medium text-slate-800">{req.email}</p>
-                      <p className="text-slate-400 font-mono">{req.phone || req.mobile}</p>
+                      <p className="font-medium text-ink">{req.email}</p>
+                      <p className="text-ink-subtle font-mono">{req.phone || req.mobile}</p>
                     </td>
-                    <td className="py-3.5 pr-3 text-slate-500">
+                    <td className="py-3.5 pr-3 text-ink-muted">
                       {new Date(req.appliedAt || req.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-3.5 pr-3">
@@ -112,12 +112,12 @@ export default function AdminRequests() {
                     </td>
                     <td className="py-3.5 pr-3">
                       {req.membershipId ? (
-                        <span className="font-mono font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md text-[11px]">
+                        <span className="font-mono font-bold text-ember bg-ember-soft px-2 py-0.5 rounded-md text-[11px]">
                           {req.membershipId}
                         </span>
                       ) : (
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                          req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : req.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                          req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : req.status === 'pending' ? 'bg-ember-soft text-ember' : 'bg-white/70 text-ink-muted'
                         }`}>
                           {req.status}
                         </span>
@@ -128,7 +128,7 @@ export default function AdminRequests() {
                         <button
                           type="button"
                           onClick={() => setSelectedReq(req)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors flex items-center gap-1"
+                          className="px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white text-ink font-bold text-[11px] transition-colors flex items-center gap-1"
                         >
                           <FiEye /> View
                         </button>
@@ -161,8 +161,8 @@ export default function AdminRequests() {
             </table>
           </div>
         ) : (
-          <div className="py-12 text-center text-slate-400 space-y-2">
-            <FiFileText className="text-4xl mx-auto text-slate-300" />
+          <div className="py-12 text-center text-ink-subtle space-y-2">
+            <FiFileText className="text-4xl mx-auto text-ink-subtle" />
             <p className="text-xs">No applications in this category.</p>
           </div>
         )}
@@ -176,47 +176,47 @@ export default function AdminRequests() {
         maxWidth="max-w-lg"
       >
         {selectedReq && (
-          <div className="space-y-4 text-xs text-slate-700">
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="space-y-4 text-xs text-ink">
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/60 border border-white">
               <img
                 src={selectedReq.photoURL || selectedReq.profilePhoto}
                 alt="Member"
-                className="w-16 h-20 rounded-xl object-cover border border-slate-300"
+                className="w-16 h-20 rounded-xl object-cover border border-white"
               />
               <div className="space-y-1 min-w-0">
-                <h4 className="text-base font-bold text-slate-900">{selectedReq.name || selectedReq.fullName}</h4>
-                <p className="text-slate-500">{selectedReq.email}</p>
-                <p className="font-bold text-slate-800">{selectedReq.phone || selectedReq.mobile}</p>
+                <h4 className="font-display text-base font-bold text-ink">{selectedReq.name || selectedReq.fullName}</h4>
+                <p className="text-ink-muted">{selectedReq.email}</p>
+                <p className="font-bold text-ink">{selectedReq.phone || selectedReq.mobile}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-white/60 border border-white">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">DOB</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">DOB</span>
                 <span className="font-bold">{selectedReq.dateOfBirth || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Gender</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Gender</span>
                 <span className="font-bold">{selectedReq.gender || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Blood Group</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Blood Group</span>
                 <span className="font-bold text-rose-500">{selectedReq.bloodGroup || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Applied At</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Applied At</span>
                 <span className="font-bold">{new Date(selectedReq.appliedAt || selectedReq.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
 
             {selectedReq.address && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Residential Address</span>
+              <div className="p-4 rounded-2xl bg-white/60 border border-white space-y-1">
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Residential Address</span>
                 <p className="leading-relaxed">{selectedReq.address}</p>
               </div>
             )}
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <div className="pt-3 border-t border-black/5 flex items-center justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedReq(null)}>
                 Close
               </Button>

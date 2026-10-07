@@ -64,7 +64,7 @@ export default function Dashboard() {
       value: pendingRequests.length,
       detail: 'Awaiting admin review & ID issue',
       icon: FiFileText,
-      color: pendingRequests.length > 0 ? 'bg-amber-50 text-amber-600 border-amber-200 animate-pulse' : 'bg-slate-50 text-slate-600 border-slate-200',
+      color: pendingRequests.length > 0 ? 'bg-ember-soft text-ember border-ember/30 animate-pulse' : 'bg-white/60 text-ink-muted border-white',
       link: '/admin/requests'
     },
     {
@@ -97,16 +97,16 @@ export default function Dashboard() {
             <Link
               key={kpi.title}
               to={kpi.link}
-              className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex items-start justify-between gap-4 group"
+              className="p-6 rounded-[30px] glass hover:shadow-md hover:border-white transition-all flex items-start justify-between gap-4 group"
             >
               <div className="space-y-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">
                   {kpi.title}
                 </span>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900 leading-none">
+                <p className="text-3xl sm:text-4xl font-bold text-ink leading-none">
                   {kpi.value}
                 </p>
-                <p className="text-[11px] text-slate-500 font-medium pt-1">
+                <p className="text-[11px] text-ink-muted font-medium pt-1">
                   {kpi.detail}
                 </p>
               </div>
@@ -120,32 +120,32 @@ export default function Dashboard() {
       </div>
 
       {/* Secondary Metric Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs grid grid-cols-3 gap-4 text-center divide-x divide-slate-100 text-xs">
+      <div className="p-4 sm:p-5 rounded-2xl glass grid grid-cols-3 gap-4 text-center divide-x divide-black/5 text-xs">
         <div>
-          <span className="text-slate-400 font-bold block">Paper / Old Records</span>
-          <span className="text-lg font-black text-slate-900">{oldRecordsCount}</span>
+          <span className="text-ink-subtle font-bold block">Paper / Old Records</span>
+          <span className="text-lg font-bold text-ink">{oldRecordsCount}</span>
         </div>
         <div>
-          <span className="text-slate-400 font-bold block">New Approved Online</span>
-          <span className="text-lg font-black text-emerald-600">{newApprovedCount}</span>
+          <span className="text-ink-subtle font-bold block">New Approved Online</span>
+          <span className="text-lg font-bold text-emerald-600">{newApprovedCount}</span>
         </div>
         <div>
-          <span className="text-slate-400 font-bold block">Rejected Applications</span>
-          <span className="text-lg font-black text-slate-500">{rejectedCount}</span>
+          <span className="text-ink-subtle font-bold block">Rejected Applications</span>
+          <span className="text-lg font-bold text-ink-muted">{rejectedCount}</span>
         </div>
       </div>
 
       {/* Recent Membership Applications Pipeline */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-5">
+      <div className="p-6 sm:p-8 rounded-[30px] glass space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black text-slate-900">Recent Membership Applications</h2>
-            <p className="text-xs text-slate-400">Quick decision pipeline for pending and recently processed submissions</p>
+            <h2 className="font-display text-lg font-bold text-ink">Recent Membership Applications</h2>
+            <p className="text-xs text-ink-subtle">Quick decision pipeline for pending and recently processed submissions</p>
           </div>
 
           <Link
             to="/admin/requests"
-            className="text-xs font-bold text-slate-900 hover:text-amber-600 transition-colors"
+            className="text-xs font-bold text-ink hover:text-ember transition-colors"
           >
             Full Queue ({requests.length}) →
           </Link>
@@ -153,9 +153,9 @@ export default function Dashboard() {
 
         {requests.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+            <table className="w-full text-left text-xs text-ink">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-black/5 text-ink-subtle font-bold uppercase tracking-wider text-[10px]">
                   <th className="pb-3">Applicant</th>
                   <th className="pb-3">Contact</th>
                   <th className="pb-3">Applied Date</th>
@@ -163,30 +163,30 @@ export default function Dashboard() {
                   <th className="pb-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-black/5">
                 {requests.slice(0, 5).map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={req.id} className="hover:bg-white/50 transition-colors">
                     <td className="py-3.5 pr-3 flex items-center gap-3">
                       <Avatar src={req.photoURL || req.profilePhoto} name={req.name || req.fullName} size="sm" />
                       <div>
-                        <span className="font-bold text-slate-900 block">{req.name || req.fullName}</span>
-                        <span className="text-[10px] text-slate-400">{req.gender} • Blood {req.bloodGroup || '—'}</span>
+                        <span className="font-bold text-ink block">{req.name || req.fullName}</span>
+                        <span className="text-[10px] text-ink-subtle">{req.gender} • Blood {req.bloodGroup || '—'}</span>
                       </div>
                     </td>
                     <td className="py-3.5 pr-3">
                       <p className="font-medium">{req.email}</p>
-                      <p className="text-slate-400">{req.phone || req.mobile}</p>
+                      <p className="text-ink-subtle">{req.phone || req.mobile}</p>
                     </td>
-                    <td className="py-3.5 pr-3 text-slate-500">
+                    <td className="py-3.5 pr-3 text-ink-muted">
                       {new Date(req.appliedAt || req.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-3.5 pr-3">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                         req.status === 'approved' 
                           ? 'bg-emerald-100 text-emerald-800' 
                           : req.status === 'pending' 
-                          ? 'bg-amber-100 text-amber-800' 
-                          : 'bg-slate-100 text-slate-600'
+                          ? 'bg-ember-soft text-ember' 
+                          : 'bg-white/70 text-ink-muted'
                       }`}>
                         {req.status}
                       </span>
@@ -196,7 +196,7 @@ export default function Dashboard() {
                         <button
                           type="button"
                           onClick={() => setSelectedRequest(req)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          className="p-1.5 rounded-lg bg-white/70 hover:bg-white text-ink transition-colors"
                           title="View Full Details"
                         >
                           <FiEye className="text-sm" />
@@ -229,13 +229,13 @@ export default function Dashboard() {
             </table>
           </div>
         ) : (
-          <p className="text-xs text-slate-400 text-center py-6">No membership applications recorded yet.</p>
+          <p className="text-xs text-ink-subtle text-center py-6">No membership applications recorded yet.</p>
         )}
       </div>
 
       {/* 6 Admin Module Shortcuts */}
       <div className="space-y-4">
-        <h2 className="text-sm font-extrabold uppercase tracking-widest text-slate-400">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-widest text-ink-subtle">
           Admin Management Modules
         </h2>
 
@@ -246,16 +246,16 @@ export default function Dashboard() {
               <Link
                 key={mod.title}
                 to={mod.link}
-                className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex items-start gap-4 group"
+                className="p-6 rounded-[30px] glass hover:shadow-md hover:border-white transition-all flex items-start gap-4 group"
               >
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 group-hover:bg-black group-hover:text-amber-400 text-slate-800 flex items-center justify-center text-xl shrink-0 transition-colors">
+                <div className="w-12 h-12 rounded-2xl bg-white/70 group-hover:bg-ember group-hover:text-white text-ink flex items-center justify-center text-xl shrink-0 transition-colors">
                   <Icon />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+                  <h3 className="font-display text-sm font-bold text-ink group-hover:text-ember transition-colors">
                     {mod.title}
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
+                  <p className="text-xs text-ink-muted leading-relaxed">
                     {mod.desc}
                   </p>
                 </div>
@@ -273,43 +273,43 @@ export default function Dashboard() {
         maxWidth="max-w-lg"
       >
         {selectedRequest && (
-          <div className="space-y-5 text-xs text-slate-700">
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <div className="space-y-5 text-xs text-ink">
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/60 border border-white">
               <Avatar src={selectedRequest.photoURL || selectedRequest.profilePhoto} name={selectedRequest.name} size="xl" />
               <div className="space-y-0.5 min-w-0">
-                <h4 className="text-base font-bold text-slate-900 truncate">{selectedRequest.name || selectedRequest.fullName}</h4>
-                <p className="text-slate-500">{selectedRequest.email}</p>
-                <p className="font-semibold text-slate-800">{selectedRequest.phone || selectedRequest.mobile}</p>
+                <h4 className="font-display text-base font-bold text-ink truncate">{selectedRequest.name || selectedRequest.fullName}</h4>
+                <p className="text-ink-muted">{selectedRequest.email}</p>
+                <p className="font-semibold text-ink">{selectedRequest.phone || selectedRequest.mobile}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-white/60 border border-white">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Date of Birth</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Date of Birth</span>
                 <span className="font-semibold">{selectedRequest.dateOfBirth || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Gender</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Gender</span>
                 <span className="font-semibold">{selectedRequest.gender || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Blood Group</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Blood Group</span>
                 <span className="font-semibold text-rose-500">{selectedRequest.bloodGroup || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Status</span>
-                <span className="font-extrabold uppercase text-amber-600">{selectedRequest.status}</span>
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Status</span>
+                <span className="font-semibold uppercase text-ember">{selectedRequest.status}</span>
               </div>
             </div>
 
             {selectedRequest.address && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Address</span>
+              <div className="p-4 rounded-2xl bg-white/60 border border-white space-y-1">
+                <span className="text-[10px] uppercase font-bold text-ink-subtle block">Address</span>
                 <p className="leading-relaxed">{selectedRequest.address}</p>
               </div>
             )}
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+            <div className="pt-3 border-t border-black/5 flex items-center justify-end gap-3">
               <Button
                 variant="outline"
                 size="md"

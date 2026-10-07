@@ -1,6 +1,6 @@
 import React from 'react';
-import { FiCalendar, FiMapPin, FiClock, FiArrowRight } from 'react-icons/fi';
-import Chip from './ui/Chip';
+import { FiMapPin, FiArrowUpRight } from 'react-icons/fi';
+import { ikUrl } from '../services/imagekitService';
 
 export default function ProgramCard({ program, onClick }) {
   if (!program) return null;
@@ -8,58 +8,47 @@ export default function ProgramCard({ program, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group relative flex flex-col justify-between bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
+      className="group relative flex flex-col cursor-pointer"
     >
-      {/* Poster Image */}
-      <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
-        <img
-          src={program.posterUrl || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80'}
-          alt={program.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
-        />
+      {/* Rimmed poster */}
+      <div className="rim rounded-[32px] transition-transform duration-300 group-hover:-translate-y-1">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] bg-white">
+          <img
+            src={ikUrl(program.posterUrl, { width: 800 }) || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80'}
+            alt={program.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 fade-light opacity-70" />
 
-        {/* Coming Soon Pill Top Left */}
-        <div className="absolute top-3 left-3">
-          <span className="px-3 py-1 rounded-full bg-violet-600 text-white font-extrabold text-[11px] tracking-wider uppercase shadow-md">
-            Coming Soon
+          {/* Coming Soon Pill Top Left */}
+          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/90 text-ink text-[11px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-ember" />
+            Coming soon
           </span>
-        </div>
 
-        {/* Category Badge Top Right */}
-        <div className="absolute top-3 right-3">
-          <Chip label={program.category || 'Tournament'} />
+          {/* Arrow Bottom Right */}
+          <span className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-white text-ember group-hover:bg-ember group-hover:text-white flex items-center justify-center shadow-[0_8px_20px_-10px_rgba(242,104,58,0.6)] transition-all">
+            <FiArrowUpRight className="text-lg" />
+          </span>
         </div>
       </div>
 
-      {/* Program Details */}
-      <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
-        <div className="space-y-2">
-          <h3 className="text-lg font-bold text-slate-900 group-hover:text-slate-700 transition-colors line-clamp-2">
-            {program.title}
-          </h3>
-          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-            {program.description}
-          </p>
+      {/* Caption under the card */}
+      <div className="px-2 pt-4 space-y-1">
+        <h3 className="font-display text-lg font-semibold text-ink leading-snug line-clamp-2">
+          {program.title}
+        </h3>
+        <div className="flex items-center gap-2 text-xs text-ink-muted">
+          <span>{program.category || 'Tournament'}</span>
+          <span className="w-1 h-1 rounded-full bg-ink-subtle" />
+          <span>{program.date}</span>
         </div>
-
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-900">
-              <FiCalendar className="text-violet-500" />
-              <span>{program.date}</span>
-            </div>
-            {program.location && (
-              <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
-                <FiMapPin className="text-slate-400" />
-                <span className="truncate max-w-[180px]">{program.location}</span>
-              </div>
-            )}
+        {program.location && (
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-subtle pt-0.5">
+            <FiMapPin className="shrink-0" />
+            <span className="truncate">{program.location}</span>
           </div>
-
-          <span className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-black group-hover:text-white text-slate-700 flex items-center justify-center transition-all shrink-0">
-            <FiArrowRight className="text-sm" />
-          </span>
-        </div>
+        )}
       </div>
     </div>
   );

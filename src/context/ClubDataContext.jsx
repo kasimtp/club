@@ -1,304 +1,185 @@
 // Club Data Context Provider
+// Loads all dynamic content from the database (Firestore) and exposes CRUD actions.
+// Private records (members & applications) are only loaded for signed-in admins, so public
+// visitors never download members' personal details.
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { sliderService } from '../services/sliderService';
 import { programService } from '../services/programService';
 import { galleryService } from '../services/galleryService';
-import { eventService } from '../services/eventService';
+import { eventService, newsService } from '../services/eventService';
 import { memberService } from '../services/memberService';
-import { defaultTeam, defaultNews, defaultServices, clubInfo } from '../data/clubData';
+import { defaultTeam, defaultServices, clubInfo } from '../data/clubData';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
 
 const ClubDataContext = createContext(null);
 
+// Turns Firestore errors into something an admin can act on
+export function describeDbError(err, fallback = 'Something went wrong.') {
+  if (err?.code === 'permission-denied') {
+    return 'The database refused this. Only a signed-in Firebase admin account can do this — '
+      + 'sign out and sign in with an account that has an admins/{uid} document in Firestore.';
+  }
+  if (err?.code === 'unavailable') return 'Cannot reach the database — check your internet connection.';
+  return err?.message || fallback;
+}
+
+// Everything shown on the site, from the database. Members & applications only for admins.
+async function loadAll(isAdmin) {
+  const [slides, programs, events, news, gallery, members, requests] = await Promise.all([
+    sliderService.getSlides(),
+    programService.getPrograms(),
+    eventService.getEvents(),
+    newsService.list(),
+    galleryService.getPhotos(),
+    isAdmin ? memberService.getMembers() : [],
+    isAdmin ? memberService.getRequests() : [],
+  ]);
+  return { slides, programs, events, news, gallery, members, requests };
+}
+
 export const ClubDataProvider = ({ children }) => {
   const { showToast } = useToast();
+  const { isAdmin, authReady } = useAuth();
 
   const [slides, setSlides] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [events, setEvents] = useState([]);
+  const [news, setNews] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [members, setMembers] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [news] = useState(defaultNews);
   const [team] = useState(defaultTeam);
   const [services] = useState(defaultServices);
   const [favourites, setFavourites] = useState(() => eventService.getFavourites());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const fetchAllData = useCallback(async () => {
-    try {
-      const [sList, pList, eList, gList, mList, rList] = await Promise.all([
-        sliderService.getSlides(),
-        programService.getPrograms(),
-        eventService.getEvents(),
-        galleryService.getPhotos(),
-        memberService.getMembers(),
-        memberService.getRequests(),
-      ]);
-
-      setSlides(sList);
-      setPrograms(pList);
-      setEvents(eList);
-      setGallery(gList);
-      setMembers(mList);
-      setRequests(rList);
-    } catch (err) {
-      console.error('Error loading club data:', err);
-    } finally {
-      setLoading(false);
-    }
+  const applyData = useCallback((data) => {
+    setSlides(data.slides);
+    setPrograms(data.programs);
+    setEvents(data.events);
+    setNews(data.news);
+    setGallery(data.gallery);
+    setMembers(data.members);
+    setRequests(data.requests);
+    setLoadError(null);
+    setLoading(false);
   }, []);
+
+  const applyError = useCallback((err) => {
+    console.error('Error loading club data:', err);
+    setLoadError(describeDbError(err, 'Could not load data from the database.'));
+    setLoading(false);
+  }, []);
+
+  /** Reloads everything from the database (used after every write) */
+  const fetchAllData = useCallback(
+    () => loadAll(isAdmin).then(applyData, applyError),
+    [isAdmin, applyData, applyError]
+  );
 
   useEffect(() => {
-    let isMounted = true;
-    const loadInit = async () => {
+    if (!authReady) return undefined;
+    let cancelled = false;
+    loadAll(isAdmin).then(
+      (data) => { if (!cancelled) applyData(data); },
+      (err) => { if (!cancelled) applyError(err); }
+    );
+    return () => { cancelled = true; };
+  }, [authReady, isAdmin, applyData, applyError]);
+
+  // Runs a write, refreshes data, and reports the result as a toast
+  const run = useCallback(
+    async (action, success, failure) => {
       try {
-        const [sList, pList, eList, gList, mList, rList] = await Promise.all([
-          sliderService.getSlides(),
-          programService.getPrograms(),
-          eventService.getEvents(),
-          galleryService.getPhotos(),
-          memberService.getMembers(),
-          memberService.getRequests(),
-        ]);
-
-        if (isMounted) {
-          setSlides(sList);
-          setPrograms(pList);
-          setEvents(eList);
-          setGallery(gList);
-          setMembers(mList);
-          setRequests(rList);
-          setLoading(false);
-        }
+        const result = await action();
+        await fetchAllData();
+        const message = typeof success === 'function' ? success(result) : success;
+        if (message) showToast(message, 'success');
+        return result;
       } catch (err) {
-        console.error('Error loading club data:', err);
-        if (isMounted) setLoading(false);
+        showToast(describeDbError(err, failure), 'error');
+        throw err;
       }
-    };
-    loadInit();
-    return () => { isMounted = false; };
-  }, []);
+    },
+    [fetchAllData, showToast]
+  );
 
-  // Favourites helper
+  // Favourites (per-device preference)
   const toggleFavourite = (eventId) => {
     const updated = eventService.toggleFavourite(eventId);
     setFavourites(updated);
-    const isNowFav = updated.includes(eventId);
-    showToast(isNowFav ? 'Added to your saved events' : 'Removed from saved events', 'info');
+    showToast(updated.includes(eventId) ? 'Added to your saved events' : 'Removed from saved events', 'info');
+  };
+  const isFavourite = (eventId) => favourites.includes(eventId);
+
+  const value = {
+    clubInfo,
+    slides,
+    programs,
+    events,
+    news,
+    gallery,
+    members,
+    requests,
+    team,
+    services,
+    loading,
+    loadError,
+    fetchAllData,
+    favourites,
+    toggleFavourite,
+    isFavourite,
+
+    // Membership
+    applyForMembership: (formData, currentUser) =>
+      run(() => memberService.submitApplication(formData, currentUser),
+        'Application submitted! The committee will review it shortly.', 'Failed to submit application'),
+    approveRequest: (id, adminName) =>
+      run(() => memberService.approveApplication(id, adminName),
+        (m) => `Membership ${m.membershipId} issued and approved!`, 'Failed to approve request'),
+    rejectRequest: (id, adminName) =>
+      run(() => memberService.rejectApplication(id, adminName), 'Application marked as rejected.', 'Failed to reject request'),
+    renewMemberRecord: (id, adminName) =>
+      run(() => memberService.renewMember(id, adminName),
+        (m) => `Membership extended until ${new Date(m.expiryDate).toLocaleDateString()}!`, 'Failed to renew membership'),
+    addManualMember: (formData, adminName) =>
+      run(() => memberService.addExistingMember(formData, adminName),
+        (m) => `Member ${m.membershipId} record created!`, 'Failed to add member'),
+    linkMember: (id, targetUser) =>
+      run(() => memberService.linkMemberToUser(id, targetUser),
+        `Account linked to ${targetUser.email || targetUser.name}!`, 'Failed to link account'),
+    unlinkMember: (id) => run(() => memberService.unlinkMember(id), 'Account unlinked.', 'Failed to unlink account'),
+
+    // Hero slides
+    addSlide: (data) => run(() => sliderService.createSlide(data, slides.length), 'Hero slide published!', 'Failed to create slide'),
+    updateSlide: (id, patch) => run(() => sliderService.updateSlide(id, patch), 'Slide updated!', 'Failed to update slide'),
+    toggleSlideStatus: (id) => run(() => sliderService.toggleSlideActive(id), 'Slide visibility updated!', 'Failed to update slide'),
+    removeSlide: (id) => run(() => sliderService.deleteSlide(id), 'Slide deleted.', 'Failed to delete slide'),
+
+    // Programs
+    addProgram: (data) => run(() => programService.createProgram(data), 'Program published!', 'Failed to publish program'),
+    removeProgram: (id) => run(() => programService.deleteProgram(id), 'Program removed.', 'Failed to remove program'),
+
+    // Gallery
+    addGalleryPhoto: (data, author) => run(() => galleryService.createPhoto(data, author), 'Photo added to the gallery!', 'Failed to save photo'),
+    removeGalleryPhoto: (id) => run(() => galleryService.deletePhoto(id), 'Photo deleted.', 'Failed to delete photo'),
+
+    // Events
+    addEvent: (data) => run(() => eventService.createEvent(data), 'Event published!', 'Failed to publish event'),
+    updateEvent: (id, patch) => run(() => eventService.updateEvent(id, patch), 'Event updated!', 'Failed to update event'),
+    removeEvent: (id) => run(() => eventService.deleteEvent(id), 'Event removed.', 'Failed to remove event'),
+    importBuiltInEvents: () => run(() => eventService.importBuiltIn(), 'Built-in events saved to the database.', 'Failed to save events'),
+
+    // News
+    addNews: (data) => run(() => newsService.create(data), 'News published!', 'Failed to publish news'),
+    updateNews: (id, patch) => run(() => newsService.update(id, patch), 'News updated!', 'Failed to update news'),
+    removeNews: (id) => run(() => newsService.remove(id), 'News removed.', 'Failed to remove news'),
+    importBuiltInNews: () => run(() => newsService.importBuiltIn(), 'Built-in news saved to the database.', 'Failed to save news'),
   };
 
-  const isFavourite = (eventId) => {
-    return favourites.includes(eventId);
-  };
-
-  // Membership Actions
-  const applyForMembership = async (formData, currentUser) => {
-    try {
-      const newReq = await memberService.submitApplication(formData, currentUser);
-      await fetchAllData();
-      showToast('Application submitted successfully! Our team will review it shortly.', 'success');
-      return newReq;
-    } catch (err) {
-      showToast(err.message || 'Failed to submit application', 'error');
-      throw err;
-    }
-  };
-
-  const approveRequest = async (requestId, adminName) => {
-    try {
-      const approved = await memberService.approveApplication(requestId, adminName);
-      await fetchAllData();
-      showToast(`Membership ${approved.membershipId} issued and approved!`, 'success');
-      return approved;
-    } catch (err) {
-      showToast(err.message || 'Failed to approve request', 'error');
-      throw err;
-    }
-  };
-
-  const rejectRequest = async (requestId, adminName) => {
-    try {
-      await memberService.rejectApplication(requestId, adminName);
-      await fetchAllData();
-      showToast('Application marked as rejected.', 'info');
-    } catch (err) {
-      showToast(err.message || 'Failed to reject request', 'error');
-      throw err;
-    }
-  };
-
-  const renewMemberRecord = async (memberId, adminName) => {
-    try {
-      const renewed = await memberService.renewMember(memberId, adminName);
-      await fetchAllData();
-      showToast(`Membership extended by 1 year until ${new Date(renewed.expiryDate).toLocaleDateString()}!`, 'success');
-      return renewed;
-    } catch (err) {
-      showToast(err.message || 'Failed to renew membership', 'error');
-      throw err;
-    }
-  };
-
-  const addManualMember = async (formData, adminName) => {
-    try {
-      const added = await memberService.addExistingMember(formData, adminName);
-      await fetchAllData();
-      showToast(`Member ${added.membershipId} record created successfully!`, 'success');
-      return added;
-    } catch (err) {
-      showToast(err.message || 'Failed to add member', 'error');
-      throw err;
-    }
-  };
-
-  const linkMember = async (memberId, targetUser) => {
-    try {
-      const linked = await memberService.linkMemberToUser(memberId, targetUser);
-      await fetchAllData();
-      showToast(`Account linked to ${targetUser.email || targetUser.name}!`, 'success');
-      return linked;
-    } catch (err) {
-      showToast(err.message || 'Failed to link account', 'error');
-      throw err;
-    }
-  };
-
-  const unlinkMember = async (memberId) => {
-    try {
-      const unlinked = await memberService.unlinkMember(memberId);
-      await fetchAllData();
-      showToast('Account unlinked successfully.', 'info');
-      return unlinked;
-    } catch (err) {
-      showToast(err.message || 'Failed to unlink account', 'error');
-      throw err;
-    }
-  };
-
-  // Slider CMS Actions
-  const addSlide = async (slideData) => {
-    try {
-      const slide = await sliderService.createSlide(slideData);
-      await fetchAllData();
-      showToast('Hero slide created successfully!', 'success');
-      return slide;
-    } catch (err) {
-      showToast(err.message || 'Failed to create slide', 'error');
-      throw err;
-    }
-  };
-
-  const toggleSlideStatus = async (slideId) => {
-    try {
-      await sliderService.toggleSlideActive(slideId);
-      await fetchAllData();
-      showToast('Slide visibility updated!', 'info');
-    } catch (err) {
-      showToast(err.message || 'Failed to update slide', 'error');
-      throw err;
-    }
-  };
-
-  const removeSlide = async (slideId) => {
-    try {
-      await sliderService.deleteSlide(slideId);
-      await fetchAllData();
-      showToast('Slide deleted.', 'info');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete slide', 'error');
-      throw err;
-    }
-  };
-
-  // Program CMS Actions
-  const addProgram = async (programData) => {
-    try {
-      const prog = await programService.createProgram(programData);
-      await fetchAllData();
-      showToast('Program published successfully!', 'success');
-      return prog;
-    } catch (err) {
-      showToast(err.message || 'Failed to publish program', 'error');
-      throw err;
-    }
-  };
-
-  const removeProgram = async (programId) => {
-    try {
-      await programService.deleteProgram(programId);
-      await fetchAllData();
-      showToast('Program removed.', 'info');
-    } catch (err) {
-      showToast(err.message || 'Failed to remove program', 'error');
-      throw err;
-    }
-  };
-
-  // Gallery CMS Actions
-  const addGalleryPhoto = async (photoData, author) => {
-    try {
-      const photo = await galleryService.createPhoto(photoData, author);
-      await fetchAllData();
-      showToast('Photo uploaded to gallery!', 'success');
-      return photo;
-    } catch (err) {
-      showToast(err.message || 'Failed to upload photo', 'error');
-      throw err;
-    }
-  };
-
-  const removeGalleryPhoto = async (photoId) => {
-    try {
-      await galleryService.deletePhoto(photoId);
-      await fetchAllData();
-      showToast('Photo deleted from gallery.', 'info');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete photo', 'error');
-      throw err;
-    }
-  };
-
-  return (
-    <ClubDataContext.Provider
-      value={{
-        clubInfo,
-        slides,
-        programs,
-        events,
-        gallery,
-        members,
-        requests,
-        news,
-        team,
-        services,
-        loading,
-        fetchAllData,
-        // Favourites
-        favourites,
-        toggleFavourite,
-        isFavourite,
-        // Membership
-        applyForMembership,
-        approveRequest,
-        rejectRequest,
-        renewMemberRecord,
-        addManualMember,
-        linkMember,
-        unlinkMember,
-        // CMS
-        addSlide,
-        toggleSlideStatus,
-        removeSlide,
-        addProgram,
-        removeProgram,
-        addGalleryPhoto,
-        removeGalleryPhoto
-      }}
-    >
-      {children}
-    </ClubDataContext.Provider>
-  );
+  return <ClubDataContext.Provider value={value}>{children}</ClubDataContext.Provider>;
 };
 
 export const useClubData = () => {

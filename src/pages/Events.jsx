@@ -7,6 +7,7 @@ import EventCard from '../components/EventCard';
 import Chip from '../components/ui/Chip';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import MediaPlaceholder from '../components/ui/MediaPlaceholder';
 
 export default function Events() {
   const { events, toggleFavourite, isFavourite } = useClubData();
@@ -15,7 +16,7 @@ export default function Events() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const navigate = useNavigate();
 
-  const categories = ['All', 'Competitions', 'Workshops', 'Training', 'Community Activities'];
+  const categories = ['All', ...new Set(events.map((e) => e.category).filter(Boolean))];
 
   const filteredEvents = events.filter((evt) => {
     const matchesCategory = selectedCategory === 'All' || evt.category.toLowerCase() === selectedCategory.toLowerCase();
@@ -23,7 +24,7 @@ export default function Events() {
     const matchesSearch = !query ||
       evt.title.toLowerCase().includes(query) ||
       evt.description.toLowerCase().includes(query) ||
-      evt.location.toLowerCase().includes(query);
+      (evt.location || '').toLowerCase().includes(query);
 
     return matchesCategory && matchesSearch;
   });
@@ -36,14 +37,14 @@ export default function Events() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400" />
           <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
-            Official Activities & Meets
+            Club calendar
           </span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
           Club Events & Calendar
         </h1>
         <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
-          Explore upcoming athletic meets, fitness masterclasses, seasonal tournaments, and community gatherings hosted at the Universal Club complex.
+          Celebrations, matches and community drives organised by Universal Arts &amp; Sports Club in Vellur.
         </p>
       </div>
 
@@ -56,7 +57,7 @@ export default function Events() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search events, workshops, venues..."
+            placeholder="Search events..."
             className="form-input pl-11 pr-10"
           />
           {searchQuery && (
@@ -139,11 +140,15 @@ export default function Events() {
         {selectedEvent && (
           <div className="space-y-5">
             <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100">
-              <img
-                src={selectedEvent.image}
-                alt={selectedEvent.title}
-                className="w-full h-full object-cover"
-              />
+              {selectedEvent.image ? (
+                <img
+                  src={selectedEvent.image}
+                  alt={selectedEvent.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <MediaPlaceholder label={selectedEvent.category} />
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -162,7 +167,7 @@ export default function Events() {
               </div>
               <div className="flex items-center gap-2">
                 <FiClock className="text-amber-500 text-base" />
-                <span><strong>Time:</strong> {selectedEvent.time || 'TBA'}</span>
+                <span><strong>Day / time:</strong> {selectedEvent.time || '—'}</span>
               </div>
               <div className="flex items-center gap-2 sm:col-span-2">
                 <FiMapPin className="text-sky-500 text-base shrink-0" />

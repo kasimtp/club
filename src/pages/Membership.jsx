@@ -14,10 +14,11 @@ import Chip from '../components/ui/Chip';
 import Modal from '../components/ui/Modal';
 import { uploadMedia } from '../services/uploadService';
 import clubLogo from '../assets/club-logo.webp';
+import { memberService } from '../services/memberService';
 
 export default function Membership() {
   const { user, isMember, isPending, memberData, refreshUser } = useAuth();
-  const { applyForMembership, members } = useClubData();
+  const { applyForMembership } = useClubData();
   const navigate = useNavigate();
 
   // Search by ID state for public lookup
@@ -80,17 +81,15 @@ export default function Membership() {
     }
   };
 
-  const handleLookup = (e) => {
+  const handleLookup = async (e) => {
     e.preventDefault();
     if (!lookupQuery.trim()) return;
-    const q = lookupQuery.trim().toLowerCase();
-    const found = members.find(m => 
-      m.membershipId?.toLowerCase() === q ||
-      m.membershipNumber?.toLowerCase() === q ||
-      m.email?.toLowerCase() === q ||
-      m.phone?.includes(q)
-    );
-    setLookedUpMember(found || null);
+    try {
+      setLookedUpMember(await memberService.lookup(lookupQuery));
+    } catch (err) {
+      console.error('Member lookup failed:', err);
+      setLookedUpMember(null);
+    }
     setLookupDone(true);
   };
 
@@ -111,7 +110,7 @@ export default function Membership() {
             Digital Membership Pass
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-            Present this official pass at the Universal Sports Complex reception for instant facility entry and court booking.
+            Your official Universal Vellur membership card. Show it at club events or when asked by the committee.
           </p>
         </div>
 
@@ -126,19 +125,19 @@ export default function Membership() {
           <ul className="space-y-2.5 text-xs text-slate-600">
             <li className="flex items-start gap-2">
               <FiCheckCircle className="text-emerald-500 shrink-0 mt-0.5" />
-              <span>Full access to athletic strength and cardio training bays.</span>
+              <span>Official member of Universal Arts &amp; Sports Club Vellur.</span>
             </li>
             <li className="flex items-start gap-2">
               <FiCheckCircle className="text-emerald-500 shrink-0 mt-0.5" />
-              <span>Priority reservation slots on 4 synthetic badminton courts.</span>
+              <span>Take part in club matches, Onam games and competitions.</span>
             </li>
             <li className="flex items-start gap-2">
               <FiCheckCircle className="text-emerald-500 shrink-0 mt-0.5" />
-              <span>Free entry to weekend wellness workshops and fitness seminars.</span>
+              <span>Join clean-up drives and community programmes.</span>
             </li>
             <li className="flex items-start gap-2">
               <FiCheckCircle className="text-emerald-500 shrink-0 mt-0.5" />
-              <span>Eligibility for club voting rights & tournament team rosters.</span>
+              <span>Digital ID card with your CLUB-ID.</span>
             </li>
           </ul>
 
@@ -216,7 +215,7 @@ export default function Membership() {
             to="/events"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
           >
-            Browse Upcoming Events in the Meantime →
+            Browse Club Events in the Meantime →
           </Link>
         </div>
       </div>
@@ -235,10 +234,10 @@ export default function Membership() {
           <FiAward /> Official Club Membership
         </span>
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-          Join Universal Sports & Arts Club
+          Join Universal Vellur
         </h1>
         <p className="text-sm text-slate-600 leading-relaxed">
-          Access high-performance gym arenas, synthetic badminton courts, floodlit football turfs, and an official Digital Membership ID Pass.
+          Become part of Vellur's arts &amp; sports family — club events, matches, community drives and an official digital membership card.
         </p>
       </div>
 
@@ -250,7 +249,7 @@ export default function Membership() {
           </div>
 
           <div>
-            <span className="text-xs font-extrabold uppercase tracking-widest text-slate-400">All-Access Annual Pass</span>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Annual Membership</span>
             <div className="flex items-baseline justify-center gap-1 mt-1">
               <span className="text-4xl sm:text-5xl font-black text-slate-950">₹200</span>
               <span className="text-sm font-bold text-slate-500">/ year</span>
@@ -264,15 +263,15 @@ export default function Membership() {
             </li>
             <li className="flex items-center gap-2.5">
               <FiCheckCircle className="text-amber-500 text-base shrink-0" />
-              <span>Full gym & training facility entry</span>
+              <span>Club matches, Onam games &amp; competitions</span>
             </li>
             <li className="flex items-center gap-2.5">
               <FiCheckCircle className="text-amber-500 text-base shrink-0" />
-              <span>Synthetic badminton court priority</span>
+              <span>Clean-up drives &amp; community programmes</span>
             </li>
             <li className="flex items-center gap-2.5">
               <FiCheckCircle className="text-amber-500 text-base shrink-0" />
-              <span>Free fitness workshops & masterclasses</span>
+              <span>Back Vellur's young talent</span>
             </li>
           </ul>
 

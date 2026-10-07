@@ -21,22 +21,22 @@ export default function Chip({
     fg = accents[variant].fg;
     bg = accents[variant].bg;
   } else if (variant === 'slate') {
-    fg = '#5C5C66';
-    bg = '#F2F2F4';
+    fg = '#6E6C75';
+    bg = 'rgba(255, 255, 255, 0.35)';
   }
 
   const isInteractive = Boolean(onClick);
 
-  const sizeStyles = size === 'sm' 
+  const sizeStyles = 'whitespace-nowrap shrink-0 ' + (size === 'sm' 
     ? 'px-2.5 py-0.5 text-xs' 
-    : 'px-3.5 py-1.5 text-xs font-semibold';
+    : 'px-3.5 py-1.5 text-xs font-semibold');
 
   if (active) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-1.5 rounded-full bg-black text-white font-bold transition-all shadow-xs ${sizeStyles} ${className}`}
+        className={`inline-flex items-center gap-1.5 rounded-full bg-white text-ink font-bold border-[1.5px] border-white shadow-[0_8px_18px_-10px_rgba(70,50,90,0.4)] transition-all ${sizeStyles} ${className}`}
       >
         {Icon && <Icon className="text-xs" />}
         <span>{label}</span>
@@ -54,7 +54,7 @@ export default function Chip({
         color: fg,
         cursor: isInteractive ? 'pointer' : 'default',
       }}
-      className={`inline-flex items-center gap-1.5 rounded-full font-medium transition-all ${
+      className={`inline-flex items-center gap-1.5 rounded-full font-medium border-[1.5px] ${variant === 'slate' ? 'border-white/80' : 'border-transparent'} transition-all ${
         isInteractive ? 'hover:opacity-85 hover:scale-[1.02] active:scale-95' : ''
       } ${sizeStyles} ${className}`}
     >

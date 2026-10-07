@@ -10,6 +10,7 @@ import Chip from '../components/ui/Chip';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { uploadMedia } from '../services/uploadService';
+import { ikUrl } from '../services/imagekitService';
 
 export default function Gallery() {
   const { gallery, addGalleryPhoto } = useClubData();
@@ -23,14 +24,14 @@ export default function Gallery() {
   const [uploadData, setUploadData] = useState({
     title: '',
     description: '',
-    category: 'Facilities',
+    category: 'Events',
     imageUrl: ''
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const categories = ['All', 'Sports', 'Events', 'Facilities', 'Community'];
-  const uploadCategories = ['Facilities', 'Sports', 'Events', 'Community', 'General'];
+  const categories = ['All', 'Sports', 'Events', 'Arts', 'Community'];
+  const uploadCategories = ['Sports', 'Events', 'Arts', 'Community', 'General'];
 
   const filteredPhotos = gallery.filter((photo) => {
     if (selectedCategory === 'All') return true;
@@ -81,7 +82,7 @@ export default function Gallery() {
     try {
       await addGalleryPhoto(uploadData, user?.name || 'Club Member');
       setIsUploadOpen(false);
-      setUploadData({ title: '', description: '', category: 'Facilities', imageUrl: '' });
+      setUploadData({ title: '', description: '', category: 'Events', imageUrl: '' });
       setSelectedFile(null);
     } finally {
       setUploading(false);
@@ -106,7 +107,7 @@ export default function Gallery() {
             Club Photo Gallery
           </h1>
           <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
-            Moments of triumph, high-intensity workouts, sports complex facilities, and community camaraderie in pictures.
+            Matches, celebrations and community moments from Universal Vellur.
           </p>
         </div>
 
@@ -146,7 +147,7 @@ export default function Gallery() {
               className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-950 cursor-pointer shadow-xs hover:shadow-lg transition-all duration-300"
             >
               <img
-                src={photo.imageUrl}
+                src={ikUrl(photo.imageUrl, { width: 700 })}
                 alt={photo.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 loading="lazy"
@@ -206,7 +207,7 @@ export default function Gallery() {
           {/* Lightbox Center Content */}
           <div className="max-w-4xl max-h-[85vh] flex flex-col items-center justify-center space-y-4">
             <img
-              src={currentLightboxPhoto.imageUrl}
+              src={ikUrl(currentLightboxPhoto.imageUrl, { width: 1600 })}
               alt={currentLightboxPhoto.title}
               className="max-h-[70vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10 animate-scale-in"
             />

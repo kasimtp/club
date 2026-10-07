@@ -1,9 +1,10 @@
-// Public Layout: Responsive Navbar, Mobile Top Header, Docked Bottom Tabs, and Footer
+// Public Layout: Floating glass header, docked bottom tabs, and glass footer ("Sense" soft-glass theme)
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { 
-  FiAward, FiUser, FiLogOut, FiShield, 
-  FiPhone, FiMail, FiMapPin, FiChevronDown
+import {
+  FiAward, FiUser, FiLogOut, FiShield,
+  FiPhone, FiMail, FiMapPin, FiChevronDown, FiArrowUpRight, FiInstagram, FiFacebook,
+  FiMenu, FiX, FiHome, FiCalendar, FiImage, FiStar, FiInfo, FiFlag, FiUsers, FiMessageCircle
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useClubData } from '../context/ClubDataContext';
@@ -14,125 +15,160 @@ import clubLogo from '../assets/club-logo.webp';
 export default function MainLayout() {
   const { user, isAdmin, isMember, logout } = useAuth();
   const { clubInfo } = useClubData();
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  // Only one header menu is open at a time: 'profile' | 'more' | 'menu' | null
+  const [openMenu, setOpenMenu] = useState(null);
+  const headerRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setProfileDropdownOpen(false);
-      }
+      if (headerRef.current && !headerRef.current.contains(e.target)) setOpenMenu(null);
     };
+    const handleEscape = (e) => { if (e.key === 'Escape') setOpenMenu(null); };
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Events', path: '/events' },
-    { name: 'Programs', path: '/programs' },
-    { name: 'Gallery', path: '/gallery' },
-    { name: 'Membership', path: '/membership' },
-    { name: 'About Us', path: '/about' },
-    { name: 'Services', path: '/services' },
-    { name: 'Team', path: '/team' },
-    { name: 'Contact', path: '/contact' },
+  // Main pages in the bar; the rest live under "More" (desktop) or "Menu" (tablet / phone)
+  const primaryLinks = [
+    { name: 'Home', path: '/', icon: FiHome },
+    { name: 'Events', path: '/events', icon: FiCalendar },
+    { name: 'Gallery', path: '/gallery', icon: FiImage },
+    { name: 'What We Do', path: '/services', icon: FiStar },
+    { name: 'About', path: '/about', icon: FiInfo },
+  ];
+  const moreLinks = [
+    { name: 'Programs', path: '/programs', icon: FiFlag, hint: 'Tournaments & upcoming programmes' },
+    { name: 'Membership', path: '/membership', icon: FiAward, hint: `Join the club · ${clubInfo.membershipFee}` },
+    { name: 'Committee', path: '/team', icon: FiUsers, hint: 'The people who run the club' },
+    { name: 'Contact', path: '/contact', icon: FiMessageCircle, hint: 'Instagram, Facebook & clubhouse' },
   ];
 
-  const closeDropdown = () => setProfileDropdownOpen(false);
+  const toggleMenu = (name) => setOpenMenu((current) => (current === name ? null : name));
+  const closeDropdown = () => setOpenMenu(null);
+  const profileDropdownOpen = openMenu === 'profile';
+
+  const menuLinkClass = ({ isActive }) =>
+    `flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors ${
+      isActive ? 'bg-white text-ink' : 'text-ink hover:bg-white/70'
+    }`;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8F8F9] text-slate-900 font-sans selection:bg-amber-300 selection:text-slate-950">
-      
+    <div className="relative isolate flex flex-col min-h-screen text-ink font-sans selection:bg-ember-soft selection:text-ink">
+
+      {/* Fixed soft-gradient canvas behind every public page */}
+      <div className="sense-canvas fixed inset-0 -z-10 pointer-events-none" aria-hidden="true" />
+
       {/* Top Announcement Ribbon */}
-      <div className="bg-black text-white text-xs py-2 px-4 text-center font-medium hidden sm:flex items-center justify-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-        <span>Universal Sports & Arts Club Membership 2026-2027 is now open • Annual fee only ₹200</span>
-        <Link to="/membership" className="font-bold underline hover:text-amber-400 ml-1">
-          Apply Now →
+      <div className="hidden sm:flex items-center justify-center gap-2 pt-3 px-4 text-xs text-ink-muted font-medium">
+        <span className="w-2 h-2 rounded-full bg-ember animate-pulse" />
+        <span>Join Universal Vellur · Membership {clubInfo.membershipFee}</span>
+        <Link to="/membership" className="font-bold text-ink hover:text-ember transition-colors ml-1">
+          Apply now →
         </Link>
       </div>
 
-      {/* Main Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            
+      {/* Floating Glass Header */}
+      <header ref={headerRef} className="sticky top-0 z-40 px-3 sm:px-6 lg:px-8 pt-3">
+        <div className="glass max-w-[76rem] mx-auto rounded-full pl-2 pr-2 sm:pr-3">
+          <div className="flex items-center justify-between h-16 gap-3">
+
             {/* Left: Brand Crest & Title */}
-            <Link to="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 p-1 flex items-center justify-center shadow-md shadow-black/5 group-hover:scale-105 transition-transform overflow-hidden">
+            <Link to="/" className="flex items-center gap-3 group shrink-0 min-w-0">
+              <div className="w-12 h-12 rounded-full bg-white p-1.5 flex items-center justify-center shadow-[0_8px_20px_-10px_rgba(242,104,58,0.6)] group-hover:scale-105 transition-transform overflow-hidden">
                 <img src={clubLogo} alt="Universal Club Crest" className="w-full h-full object-contain" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-lg font-black tracking-tight text-slate-950 uppercase">
-                    Universal<span className="text-amber-500">Club</span>
-                  </span>
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                  Arts & Sports • Kerala
+              <div className="min-w-0">
+                <span className="block font-display text-xl font-bold tracking-tight text-ink leading-none">
+                  Universal
+                </span>
+                <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-[0.14em] leading-none mt-1">
+                  Arts & Sports · Vellur
                 </p>
               </div>
             </Link>
 
-            {/* Center: Desktop Navigation Links */}
-            <nav className="hidden xl:flex items-center gap-1">
-              {navLinks.map((link) => (
+            {/* Center: main pages + "More" (desktop) */}
+            <nav className="hidden lg:flex items-center gap-1" aria-label="Main">
+              {primaryLinks.map((link) => (
                 <NavLink
                   key={link.name}
                   to={link.path}
                   end={link.path === '/'}
                   className={({ isActive }) =>
-                    `px-3.5 py-2 text-xs font-bold rounded-full transition-all duration-200 ${
-                      isActive
-                        ? 'bg-black text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
-                    }`
+                    `pill !h-9 !px-4 !text-xs ${isActive ? 'pill-active' : '!border-transparent !bg-transparent hover:!bg-white/50'}`
                   }
                 >
                   {link.name}
                 </NavLink>
               ))}
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => toggleMenu('more')}
+                  aria-expanded={openMenu === 'more'}
+                  aria-haspopup="true"
+                  className={`pill !h-9 !px-4 !text-xs ${openMenu === 'more' ? 'pill-active' : '!border-transparent !bg-transparent hover:!bg-white/50'}`}
+                >
+                  More
+                  <FiChevronDown className={`transition-transform ${openMenu === 'more' ? 'rotate-180' : ''}`} />
+                </button>
+
+                {openMenu === 'more' && (
+                  <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 rounded-[26px] bg-[#F7F6F8] border-[1.5px] border-white shadow-[0_24px_48px_-20px_rgba(70,50,90,0.4)] p-2 animate-scale-in">
+                    {moreLinks.map((link) => {
+                      const Icon = link.icon;
+                      return (
+                        <NavLink key={link.name} to={link.path} onClick={closeDropdown} className={menuLinkClass}>
+                          <span className="w-9 h-9 rounded-full bg-white text-ember flex items-center justify-center shrink-0">
+                            <Icon />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold">{link.name}</span>
+                            <span className="block text-[11px] text-ink-muted truncate">{link.hint}</span>
+                          </span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* Right: Actions / Auth Profile */}
-            <div className="flex items-center gap-3">
-              {isAdmin && (
-                <Link
-                  to="/admin/dashboard"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-amber-400/20 border border-amber-400/50 text-slate-950 text-xs font-extrabold hover:bg-amber-400/30 transition-all shadow-xs"
-                >
-                  <FiShield className="text-sm text-amber-600" />
-                  <span>Admin Panel</span>
-                </Link>
-              )}
+            <div className="flex items-center gap-2">
 
               {user ? (
                 /* Authenticated User Menu */
-                <div className="relative" ref={dropdownRef}>
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="flex items-center gap-2 p-1.5 pl-3 rounded-full bg-slate-100 hover:bg-slate-200 transition-all border border-slate-200"
+                    onClick={() => toggleMenu('profile')}
+                    aria-expanded={profileDropdownOpen}
+                    className="flex items-center gap-2 p-1 pl-3 rounded-full bg-white/80 hover:bg-white transition-all border border-white"
                     aria-label="User profile menu"
                   >
-                    <span className="text-xs font-bold text-slate-800 max-w-[100px] truncate hidden sm:inline-block">
-                      {user.name?.split(' ')[0] || 'Member'}
+                    <span className="text-xs font-bold text-ink max-w-[100px] truncate hidden sm:inline-block">
+                      {isAdmin ? 'Admin' : user.name?.split(' ')[0] || 'Member'}
                     </span>
                     <Avatar src={user.profilePhoto || user.photoURL} name={user.name} size="sm" />
-                    <FiChevronDown className="text-xs text-slate-500 mr-1" />
+                    <FiChevronDown className="text-xs text-ink-subtle mr-1" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {profileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-scale-in">
-                      <div className="px-3 py-2.5 border-b border-slate-100 mb-1">
-                        <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
-                        <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                    <div className="glass-strong absolute right-0 mt-3 w-64 rounded-3xl p-2 z-50 animate-scale-in">
+                      <div className="px-3 py-2.5 border-b border-black/5 mb-1">
+                        <p className="text-xs font-bold text-ink truncate">{user.name}</p>
+                        <p className="text-[11px] text-ink-muted truncate">{user.email}</p>
                         <div className="mt-1.5">
-                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
-                            isMember ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            isMember ? 'bg-emerald-100 text-emerald-800' : 'bg-ember-soft text-ember'
                           }`}>
                             {isMember ? `Member (${user.membershipId || 'Active'})` : 'Registered User'}
                           </span>
@@ -143,18 +179,18 @@ export default function MainLayout() {
                         <Link
                           to="/membership"
                           onClick={closeDropdown}
-                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-ink hover:bg-black/5 transition-colors"
                         >
-                          <FiAward className="text-amber-500" />
+                          <FiAward className="text-ember" />
                           <span>My Digital ID Card</span>
                         </Link>
 
                         <Link
                           to="/profile"
                           onClick={closeDropdown}
-                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-ink hover:bg-black/5 transition-colors"
                         >
-                          <FiUser className="text-sky-500" />
+                          <FiUser className="text-ink-muted" />
                           <span>My Profile & Settings</span>
                         </Link>
 
@@ -162,9 +198,9 @@ export default function MainLayout() {
                           <Link
                             to="/admin/dashboard"
                             onClick={closeDropdown}
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-amber-50 text-amber-900 transition-colors"
+                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-ink hover:bg-black/5 transition-colors"
                           >
-                            <FiShield className="text-amber-600" />
+                            <FiShield className="text-ink-muted" />
                             <span>Admin Portal</span>
                           </Link>
                         )}
@@ -176,7 +212,7 @@ export default function MainLayout() {
                             logout();
                             navigate('/');
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <FiLogOut />
                           <span>Sign Out</span>
@@ -187,113 +223,170 @@ export default function MainLayout() {
                 </div>
               ) : (
                 /* Unauthenticated Guest Actions */
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Link
                     to="/login"
-                    className="px-4 py-2 rounded-full text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-slate-950 transition-colors"
+                    className="hidden sm:inline-flex items-center h-10 px-4 rounded-full whitespace-nowrap text-xs font-semibold text-ink-muted hover:text-ink hover:bg-white/60 transition-colors"
                   >
-                    Sign In
+                    Sign in
                   </Link>
 
                   <Link
                     to="/membership"
-                    className="px-5 py-2.5 rounded-full bg-black hover:bg-slate-800 text-white text-xs font-extrabold shadow-sm transition-all"
+                    className="hidden sm:inline-flex items-center gap-1.5 h-11 pl-5 pr-1.5 rounded-full whitespace-nowrap bg-white text-ink text-xs font-bold shadow-[0_8px_20px_-12px_rgba(70,50,90,0.45)] hover:shadow-[0_10px_24px_-10px_rgba(242,104,58,0.5)] transition-all"
                   >
-                    Join Club (₹200)
+                    Join · ₹200
+                    <span className="w-8 h-8 rounded-full bg-ember text-white flex items-center justify-center">
+                      <FiArrowUpRight className="text-sm" />
+                    </span>
                   </Link>
                 </div>
               )}
+
+              {/* Tablet / phone: every page in one menu */}
+              <button
+                type="button"
+                onClick={() => toggleMenu('menu')}
+                aria-expanded={openMenu === 'menu'}
+                aria-label={openMenu === 'menu' ? 'Close menu' : 'Open menu'}
+                className="lg:hidden w-11 h-11 rounded-full bg-white text-ink flex items-center justify-center shrink-0 shadow-[0_8px_20px_-12px_rgba(70,50,90,0.45)]"
+              >
+                {openMenu === 'menu' ? <FiX className="text-lg" /> : <FiMenu className="text-lg" />}
+              </button>
             </div>
 
           </div>
         </div>
+
+        {openMenu === 'menu' && (
+          <nav
+            aria-label="All pages"
+            className="lg:hidden absolute left-3 right-3 sm:left-6 sm:right-6 mt-3 rounded-[28px] bg-[#F7F6F8] border-[1.5px] border-white shadow-[0_30px_60px_-24px_rgba(70,50,90,0.45)] p-3 animate-scale-in max-h-[calc(100dvh-190px)] overflow-y-auto"
+          >
+            <p className="px-3 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">Pages</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+              {[...primaryLinks, ...moreLinks].map((link) => {
+                const Icon = link.icon;
+                return (
+                  <NavLink key={link.name} to={link.path} end={link.path === '/'} onClick={closeDropdown} className={menuLinkClass}>
+                    <span className="w-9 h-9 rounded-full bg-white text-ember flex items-center justify-center shrink-0">
+                      <Icon />
+                    </span>
+                    <span className="text-sm font-semibold">{link.name}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+            {!user && (
+              <Link
+                to="/login"
+                onClick={closeDropdown}
+                className="mt-2 flex items-center justify-center h-11 rounded-full bg-white text-sm font-semibold text-ink"
+              >
+                Sign in
+              </Link>
+            )}
+          </nav>
+        )}
       </header>
 
       {/* Main Page Body */}
-      <main className="flex-1 pb-20 md:pb-12">
+      <main className="flex-1 pb-24 md:pb-12">
         <Outlet />
       </main>
 
       {/* Mobile Docked Bottom Tab Navigation */}
       <BottomTabBar />
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-white border-t border-slate-900 pt-16 pb-24 md:pb-16 hidden sm:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Glass Footer */}
+      <footer className="hidden sm:block px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="glass max-w-[76rem] mx-auto rounded-[36px] p-8 lg:p-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
-            
+
             {/* Col 1 & 2: Brand Info */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white p-1 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-white p-1.5 flex items-center justify-center">
                   <img src={clubLogo} alt="Universal Club Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black tracking-tight text-white uppercase">Universal Club</h3>
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">Arts & Sports Association</p>
+                  <h3 className="font-display text-lg font-bold tracking-tight text-ink">Universal Vellur</h3>
+                  <p className="text-[10px] text-ink-subtle uppercase font-semibold tracking-[0.14em]">Arts & Sports Club</p>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-                A community sanctuary dedicated to athletic development, fitness excellence, and socio-cultural camaraderie in Malappuram, Kerala.
+              <p className="text-sm text-ink-muted leading-relaxed max-w-sm">
+                {clubInfo.tagline}
               </p>
-              <div className="pt-2 text-xs text-slate-400 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <FiMapPin className="text-amber-400 shrink-0" />
+              <div className="pt-2 text-xs text-ink-muted space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <FiMapPin className="text-ember shrink-0" />
                   <span>{clubInfo.address}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FiPhone className="text-amber-400 shrink-0" />
-                  <span>{clubInfo.phone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FiMail className="text-amber-400 shrink-0" />
-                  <span>{clubInfo.email}</span>
-                </div>
+                {clubInfo.phone && (
+                  <div className="flex items-center gap-2.5">
+                    <FiPhone className="text-ember shrink-0" />
+                    <span>{clubInfo.phone}</span>
+                  </div>
+                )}
+                {clubInfo.email && (
+                  <div className="flex items-center gap-2.5">
+                    <FiMail className="text-ember shrink-0" />
+                    <span>{clubInfo.email}</span>
+                  </div>
+                )}
+                <a href={clubInfo.socials.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-ink transition-colors">
+                  <FiInstagram className="text-ember shrink-0" />
+                  <span>{clubInfo.socials.instagramHandle}</span>
+                </a>
+                <a href={clubInfo.socials.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-ink transition-colors">
+                  <FiFacebook className="text-ember shrink-0" />
+                  <span>Universal Arts &amp; Sports Club Vellur</span>
+                </a>
               </div>
             </div>
 
             {/* Col 3: Quick Navigation */}
             <div>
-              <h4 className="text-xs font-extrabold uppercase tracking-widest text-amber-400 mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                <li><Link to="/" className="hover:text-white transition-colors">Home Feed</Link></li>
-                <li><Link to="/events" className="hover:text-white transition-colors">Calendar & Events</Link></li>
-                <li><Link to="/programs" className="hover:text-white transition-colors">Upcoming Programs</Link></li>
-                <li><Link to="/gallery" className="hover:text-white transition-colors">Club Photo Gallery</Link></li>
-                <li><Link to="/membership" className="hover:text-white transition-colors">Apply for Membership</Link></li>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle mb-4">Explore</h4>
+              <ul className="space-y-2.5 text-sm text-ink font-medium">
+                <li><Link to="/" className="hover:text-ember transition-colors">Home</Link></li>
+                <li><Link to="/events" className="hover:text-ember transition-colors">Calendar & Events</Link></li>
+                <li><Link to="/programs" className="hover:text-ember transition-colors">Upcoming Programs</Link></li>
+                <li><Link to="/gallery" className="hover:text-ember transition-colors">Photo Gallery</Link></li>
+                <li><Link to="/membership" className="hover:text-ember transition-colors">Membership</Link></li>
               </ul>
             </div>
 
             {/* Col 4: Club Exploration */}
             <div>
-              <h4 className="text-xs font-extrabold uppercase tracking-widest text-amber-400 mb-4">About USAC</h4>
-              <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                <li><Link to="/about" className="hover:text-white transition-colors">History & Heritage</Link></li>
-                <li><Link to="/services" className="hover:text-white transition-colors">Sports Facilities</Link></li>
-                <li><Link to="/team" className="hover:text-white transition-colors">Leadership & Committee</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact & Enquiries</Link></li>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle mb-4">About</h4>
+              <ul className="space-y-2.5 text-sm text-ink font-medium">
+                <li><Link to="/about" className="hover:text-ember transition-colors">About the Club</Link></li>
+                <li><Link to="/services" className="hover:text-ember transition-colors">What We Do</Link></li>
+                <li><Link to="/team" className="hover:text-ember transition-colors">Committee</Link></li>
+                <li><Link to="/contact" className="hover:text-ember transition-colors">Contact</Link></li>
               </ul>
             </div>
 
             {/* Col 5: Member & Admin Access */}
             <div>
-              <h4 className="text-xs font-extrabold uppercase tracking-widest text-amber-400 mb-4">Portals</h4>
-              <ul className="space-y-2 text-xs text-slate-400 font-medium">
-                <li><Link to="/login" className="hover:text-white transition-colors">Member Sign In</Link></li>
-                <li><Link to="/admin/login" className="hover:text-amber-400 font-bold transition-colors">Admin Login</Link></li>
-                {isAdmin && <li><Link to="/admin/dashboard" className="text-amber-400 font-bold hover:underline">Admin Dashboard</Link></li>}
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle mb-4">Portals</h4>
+              <ul className="space-y-2.5 text-sm text-ink font-medium">
+                <li><Link to="/login" className="hover:text-ember transition-colors">Member Sign In</Link></li>
+                <li><Link to="/admin/login" className="hover:text-ember transition-colors">Admin Login</Link></li>
+                {isAdmin && <li><Link to="/admin/dashboard" className="text-ember hover:underline">Admin Dashboard</Link></li>}
               </ul>
-              <div className="mt-6 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Annual Membership</span>
-                <span className="text-sm font-extrabold text-white">₹200 / Year</span>
+              <div className="mt-6 p-3.5 rounded-2xl bg-white/70 border border-white">
+                <span className="text-[10px] text-ink-subtle block uppercase font-semibold tracking-wider">Annual Membership</span>
+                <span className="font-display text-lg font-bold text-ink">₹200 / year</span>
               </div>
             </div>
 
           </div>
 
-          <div className="mt-12 pt-8 border-t border-slate-900 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>© {new Date().getFullYear()} Universal Sports & Arts Club. All rights reserved.</p>
-            <p className="text-[11px]">{clubInfo.affiliation}</p>
+          <div className="mt-10 pt-6 border-t border-black/5 text-xs text-ink-subtle flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© {new Date().getFullYear()} {clubInfo.name}. All rights reserved.</p>
+            {clubInfo.affiliation && <p className="text-[11px]">{clubInfo.affiliation}</p>}
           </div>
         </div>
       </footer>

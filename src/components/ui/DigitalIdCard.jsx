@@ -33,7 +33,7 @@ export default function DigitalIdCard({ member }) {
         <div className="absolute -top-16 -right-16 w-48 h-48 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-sky-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-1/2 right-4 -translate-y-1/2 opacity-5 text-9xl font-black pointer-events-none">
-          USAC
+          UASC
         </div>
 
         {/* Card Header: Brand & Crest */}
@@ -44,7 +44,7 @@ export default function DigitalIdCard({ member }) {
             </div>
             <div>
               <h4 className="text-xs font-black tracking-wider uppercase text-amber-400">Universal Club</h4>
-              <p className="text-[10px] text-slate-400 font-medium">Sports & Arts Association • Kerala</p>
+              <p className="text-[10px] text-slate-400 font-medium">Arts & Sports Club • Vellur</p>
             </div>
           </div>
 

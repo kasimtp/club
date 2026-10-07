@@ -21,12 +21,12 @@ export default function BottomTabBar() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 pb-safe">
-      <nav className="flex items-center justify-around h-16 px-2">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-safe">
+      <nav className="glass-strong flex items-center justify-around h-16 px-2 mb-3 rounded-full">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = tab.path === '/' 
-            ? location.pathname === '/' 
+          const isActive = tab.path === '/'
+            ? location.pathname === '/'
             : location.pathname.startsWith(tab.path);
 
           return (
@@ -34,17 +34,13 @@ export default function BottomTabBar() {
               key={tab.name}
               to={tab.path}
               className={`flex flex-col items-center justify-center flex-1 py-1 transition-all select-none ${
-                isActive 
-                  ? 'text-slate-950 font-bold' 
-                  : 'text-slate-400 hover:text-slate-600 font-medium'
+                isActive
+                  ? 'text-ink font-bold'
+                  : 'text-ink-subtle hover:text-ink-muted font-medium'
               }`}
             >
-              <div className={`p-1.5 rounded-full transition-all ${
-                isActive ? 'bg-slate-100 text-slate-950 scale-110' : ''
-              }`}>
-                <Icon className="text-xl" />
-              </div>
-              <span className="text-[10px] tracking-tight mt-0.5">
+              <Icon className={`text-xl ${isActive ? 'text-ember' : ''}`} />
+              <span className="text-[10px] tracking-tight mt-1">
                 {tab.name}
               </span>
             </NavLink>

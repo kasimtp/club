@@ -1,118 +1,106 @@
-// About Club Page: Heritage, History, Vision, Mission, Objectives
+// About Club Page — who the club is, from its own public pages
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiTarget, FiCompass, FiCheckCircle, FiMapPin, FiShield } from 'react-icons/fi';
+import { FiMapPin, FiInstagram, FiFacebook, FiArrowUpRight } from 'react-icons/fi';
 import { useClubData } from '../context/ClubDataContext';
 import clubLogo from '../assets/club-logo.webp';
+
+// Instagram story highlights + recent posts
+const MILESTONES = [
+  { title: 'Onam 2K20', text: 'Onam celebrations for the village.' },
+  { title: 'Environment Day', text: 'Environment Day activities with members.' },
+  { title: 'Colouring competition', text: 'A colouring competition for the children of Vellur.' },
+  { title: 'AvaaZ', text: 'A club cultural programme.' },
+  { title: 'Onam 2K23', text: 'Another year of Onam games and celebrations.' },
+  { title: 'Ente Vellur, Sundara Vellur', text: 'Aug 2026 — the clean-up mission begins.' },
+  { title: 'State kickboxing gold', text: 'Aug 2026 — Muhammed Danish P.P., 51 kg senior full contact.' },
+  { title: 'Universalonam 2K26', text: '30 Aug 2026 — Onam games for adults and kids.' },
+  { title: 'Super League Kerala', text: 'Sep 2026 — Abdul Samad P.P. joins Thrissur Magic FC.' },
+];
 
 export default function About() {
   const { clubInfo } = useClubData();
 
-  const objectives = [
-    'Establish regional standard athletic and strength facilities accessible to all community members.',
-    'Scout, sponsor, and coach promising youth track, football, and racquet sports athletes in Malappuram.',
-    'Host state-recognized badminton, volleyball, and 7-a-side football tournaments annually.',
-    'Promote holistic lifestyle wellness through yoga, physical literacy, and restorative workshops.',
-    'Maintain a transparent, member-centric sports association affiliated with state sports councils.'
-  ];
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 animate-fade-in">
-      
-      {/* Header Banner */}
-      <div className="text-center space-y-3 max-w-3xl mx-auto">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-700 border border-amber-400/30 text-xs font-black uppercase tracking-wider">
-          <FiShield /> Established {clubInfo.establishedYear}
-        </span>
-        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-          Heritage & Mission
-        </h1>
-        <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-          {clubInfo.tagline}
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 animate-fade-in">
+
+      {/* Header */}
+      <div className="glass relative overflow-hidden rounded-[34px] p-8 sm:p-14 text-center">
+        <div className="dot-grid absolute inset-0 pointer-events-none" aria-hidden="true" />
+        <div className="relative flex flex-col items-center">
+          <div className="w-24 h-24 rounded-full bg-white p-2 shadow-[0_14px_30px_-12px_rgba(242,104,58,0.5)] mb-6">
+            <img src={clubLogo} alt="Universal Arts & Sports Club emblem" className="w-full h-full object-contain" />
+          </div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">About the club</p>
+          <h1 className="font-display text-4xl sm:text-5xl font-medium text-ink tracking-tight mt-2">
+            Universal <span className="font-bold">Vellur</span>
+          </h1>
+          <p className="mt-4 text-base text-ink-muted max-w-xl leading-relaxed">{clubInfo.tagline}</p>
+          <p className="mt-2 text-sm text-ink-subtle">{clubInfo.taglineMl}</p>
+        </div>
       </div>
 
-      {/* Heritage & Origin Card */}
-      <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 p-1.5 flex items-center justify-center shadow-md">
-            <img src={clubLogo} alt="Universal Club Emblem" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900">A Decade of Grassroots Athletics</h2>
-            <p className="text-xs text-slate-400">{clubInfo.registrationNumber}</p>
-          </div>
-        </div>
-
-        <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
+      {/* Story */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="glass lg:col-span-7 rounded-[34px] p-8 sm:p-10 space-y-4 text-sm sm:text-base text-ink-muted leading-relaxed">
+          <h2 className="font-display text-2xl sm:text-3xl font-medium text-ink">
+            Arts, sports and <span className="font-bold">community</span>
+          </h2>
           <p>
-            Universal Sports & Arts Club was founded in 2015 by a passionate collective of former state athletes and community elders in Malappuram, Kerala. Recognizing the scarcity of structured physical training infrastructure, the club set out to build an all-inclusive complex bridging grassroots youth talent and elite athletic coaching.
+            Universal Arts &amp; Sports Club is a youth club in Vellur. From its clubhouse, members organise matches,
+            Onam celebrations, competitions for children and drives that keep the village clean.
           </p>
           <p>
-            Over the past decade, our facilities have expanded from a single outdoor sprint track to a full-fledged athletic complex housing four BWF-standard synthetic badminton courts, an Eleiko-equipped Olympic weightlifting gym, and an all-weather floodlit 7-a-side football turf.
+            The club also cheers on its own — like Abdul Samad P.P., now playing for Thrissur Magic FC in the Super
+            League Kerala, and Muhammed Danish P.P., state kickboxing gold medallist in 2026.
           </p>
+        </div>
+
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          <div className="glass rounded-[34px] p-7 space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">Find us</p>
+            <p className="flex items-center gap-2.5 text-ink font-semibold">
+              <FiMapPin className="text-ember" /> {clubInfo.location}
+            </p>
+            <a href={clubInfo.socials.instagram} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2.5 text-sm text-ink-muted hover:text-ink transition-colors">
+              <FiInstagram className="text-ember" /> {clubInfo.socials.instagramHandle} · {clubInfo.instagramFollowers} followers
+            </a>
+            <a href={clubInfo.socials.facebook} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2.5 text-sm text-ink-muted hover:text-ink transition-colors">
+              <FiFacebook className="text-ember" /> Universal Arts &amp; Sports Club Vellur
+            </a>
+          </div>
+
+          <Link to="/membership" className="glass rounded-[34px] p-7 flex items-center justify-between gap-4 group">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">Membership</p>
+              <p className="font-display text-2xl font-bold text-ink">{clubInfo.membershipFee}</p>
+            </div>
+            <span className="w-12 h-12 rounded-full bg-white text-ember flex items-center justify-center group-hover:bg-ember group-hover:text-white transition-all">
+              <FiArrowUpRight className="text-xl" />
+            </span>
+          </Link>
         </div>
       </div>
 
-      {/* Vision & Mission Dual Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Vision */}
-        <div className="p-8 rounded-3xl bg-slate-950 text-white space-y-4 shadow-md">
-          <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black">
-            <FiCompass />
-          </div>
-          <h3 className="text-xl font-black text-white">Our Vision</h3>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            To become Kerala's benchmark community athletics hub, inspiring every child and adult to embrace lifelong physical fitness, competitive sportsmanship, and mental resilience.
-          </p>
-        </div>
-
-        {/* Mission */}
-        <div className="p-8 rounded-3xl bg-white border border-slate-200 text-slate-900 space-y-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center text-2xl font-black">
-            <FiTarget />
-          </div>
-          <h3 className="text-xl font-black text-slate-900">Our Mission</h3>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Provide state-of-the-art training infrastructure at a democratic fee of just ₹200/year, ensuring that economic background never restricts an aspiring athlete from greatness.
-          </p>
-        </div>
-
-      </div>
-
-      {/* Core Objectives Checklist */}
-      <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-6">
-        <h3 className="text-base font-extrabold text-slate-900 uppercase tracking-wider">
-          Core Institutional Objectives
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {objectives.map((obj, i) => (
-            <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <FiCheckCircle className="text-emerald-500 text-lg shrink-0 mt-0.5" />
-              <span className="text-xs text-slate-700 font-medium leading-relaxed">{obj}</span>
+      {/* Milestones */}
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">From our pages</p>
+        <h2 className="font-display text-3xl font-medium text-ink tracking-tight mt-1.5 mb-6">
+          Moments we're <span className="font-bold">proud of</span>
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {MILESTONES.map((m) => (
+            <div key={m.title} className="glass rounded-[26px] p-5 flex items-start gap-3">
+              <span className="orb w-4 h-4 mt-1 shrink-0" aria-hidden="true" />
+              <div>
+                <h3 className="font-display text-base font-semibold text-ink">{m.title}</h3>
+                <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">{m.text}</p>
+              </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Location Coordinates & Contact CTA */}
-      <div className="p-8 rounded-3xl bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="space-y-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
-            <FiMapPin /> Universal Sports Complex
-          </div>
-          <h4 className="text-lg font-black text-white">{clubInfo.address}</h4>
-          <p className="text-xs text-slate-400">Weekdays: {clubInfo.openingHours.weekdays} • Weekends: {clubInfo.openingHours.weekends}</p>
-        </div>
-
-        <Link
-          to="/contact"
-          className="px-6 py-3 rounded-full bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black transition-all shrink-0"
-        >
-          Contact & Directions →
-        </Link>
       </div>
 
     </div>

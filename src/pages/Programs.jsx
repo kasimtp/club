@@ -17,27 +17,35 @@ export default function Programs() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-violet-500" />
           <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
-            Tournaments & Intensive Camps
+            Tournaments & programmes
           </span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
           Upcoming Programs
         </h1>
         <p className="text-sm text-slate-500 max-w-2xl leading-relaxed">
-          Get ready for regional tournaments, badminton open leagues, and athletic development conditioning camps scheduled at the Universal Sports Complex.
+          Tournaments, competitions and programmes the club is planning next. Follow us on Instagram to hear first.
         </p>
       </div>
 
       {/* Programs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {programs.map((prog) => (
-          <ProgramCard
-            key={prog.id}
-            program={prog}
-            onClick={() => navigate(`/programs/${prog.id}`)}
-          />
-        ))}
-      </div>
+      {programs.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {programs.map((prog) => (
+            <ProgramCard
+              key={prog.id}
+              program={prog}
+              onClick={() => navigate(`/programs/${prog.id}`)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="glass rounded-[30px] p-10 text-center space-y-2">
+          <div className="orb w-12 h-12 mx-auto" aria-hidden="true" />
+          <h3 className="font-display text-lg font-semibold text-ink">Nothing announced yet</h3>
+          <p className="text-sm text-ink-muted">New tournaments and programmes will appear here as soon as they're announced.</p>
+        </div>
+      )}
 
     </div>
   );

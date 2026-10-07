@@ -1,10 +1,11 @@
-// Home Page Component
-import React, { useState } from 'react';
+// Home Page Component — "Sense" soft-glass bento landing
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  FiArrowRight, FiAward, FiCalendar, FiUsers, 
-  FiTarget, FiCheckCircle, FiChevronRight, FiMapPin, FiClock 
+import {
+  FiArrowUpRight, FiCalendar, FiMapPin, FiClock, FiPlay,
+  FiCreditCard, FiStar, FiHeart, FiUsers, FiInstagram, FiSend
 } from 'react-icons/fi';
+import { MdSportsSoccer, MdSportsCricket, MdPalette, MdVolunteerActivism } from 'react-icons/md';
 import { useClubData } from '../context/ClubDataContext';
 import { useAuth } from '../context/AuthContext';
 import HomeSlider from '../components/HomeSlider';
@@ -13,98 +14,226 @@ import ProgramCard from '../components/ProgramCard';
 import Button from '../components/ui/Button';
 import Chip from '../components/ui/Chip';
 import Modal from '../components/ui/Modal';
+import MediaPlaceholder from '../components/ui/MediaPlaceholder';
+import clubLogo from '../assets/club-logo.webp';
+
+// Activity tiles: abstract pastel gradients (like the reference's Music / Move / Sleep cards)
+const ACTIVITY_TILES = {
+  football: { icon: MdSportsSoccer, gradient: 'linear-gradient(140deg, #FFB08A 0%, #F7C9A8 35%, #C9E7C4 70%, #9FD7A8 100%)' },
+  cricket: { icon: MdSportsCricket, gradient: 'linear-gradient(150deg, #B7C8F5 0%, #D9C6F2 45%, #F6B7C6 100%)' },
+  arts: { icon: MdPalette, gradient: 'linear-gradient(140deg, #FFD08A 0%, #FFB0A0 45%, #F49AC1 100%)' },
+  community: { icon: MdVolunteerActivism, gradient: 'linear-gradient(150deg, #A9E2D0 0%, #C9E3F2 50%, #D8C4F4 100%)' },
+};
+
+// Facts from the club's own posts
+const STATS = [
+  { value: '3,000+', label: 'Instagram followers' },
+  { value: 'Onam', label: 'Celebrated since 2K20' },
+  { value: 'Gold', label: 'State kickboxing 2026' },
+  { value: 'SLK', label: 'Player in Super League Kerala' },
+];
+
+const MEMBER_PERKS = [
+  { icon: FiCreditCard, label: 'Official digital ID card' },
+  { icon: FiStar, label: 'Onam games, matches & club events' },
+  { icon: FiHeart, label: 'Clean-up & community drives' },
+  { icon: FiUsers, label: "Back Vellur's young talent" },
+];
+
+function SectionHeading({ eyebrow, title, strong, action }) {
+  return (
+    <div className="flex items-end justify-between gap-4 mb-6">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">{eyebrow}</p>
+        <h2 className="font-display text-3xl sm:text-4xl font-medium text-ink tracking-tight mt-1.5">
+          {title} <span className="font-bold">{strong}</span>
+        </h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function SeeAll({ to, children }) {
+  return (
+    <Link to={to} className="pill shrink-0">
+      {children} <FiArrowUpRight className="text-ember" />
+    </Link>
+  );
+}
 
 export default function Home() {
-  const { slides, programs, events, news, toggleFavourite, isFavourite } = useClubData();
+  const { clubInfo, slides, programs, events, news, services, toggleFavourite, isFavourite } = useClubData();
   const { isMember } = useAuth();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [eventFilter, setEventFilter] = useState('All');
   const navigate = useNavigate();
 
-  // Filter top programs & upcoming events
   const comingSoonPrograms = programs.slice(0, 3);
-  const upcomingEvents = events.slice(0, 3);
   const latestNews = news.slice(0, 3);
+  const nextEvent = events[0];
+  const hasSlides = slides.some((s) => s.active !== false);
+
+  const eventCategories = useMemo(
+    () => ['All', ...new Set(events.map((e) => e.category).filter(Boolean))].slice(0, 5),
+    [events]
+  );
+  const filteredEvents = (eventFilter === 'All' ? events : events.filter((e) => e.category === eventFilter)).slice(0, 3);
 
   return (
-    <div className="space-y-12 sm:space-y-16 pb-12 animate-fade-in">
-      
-      {/* 1. Hero Media Slider Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
-        <HomeSlider slides={slides} />
-      </section>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-12 space-y-16 sm:space-y-24 animate-fade-in">
 
-      {/* 2. Quick Highlight Stats Bar */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0 font-bold">
-              <FiAward />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">500+</p>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Members</p>
+      {/* 1. Hero Bento */}
+      <section className="space-y-4 sm:space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+
+          {/* Club identity card */}
+          <div className={`glass relative overflow-hidden ${hasSlides ? 'lg:col-span-5' : 'lg:col-span-12'} rounded-[34px] p-7 sm:p-10 flex flex-col items-center justify-center text-center min-h-[420px]`}>
+            <div className="dot-grid absolute inset-0 pointer-events-none" aria-hidden="true" />
+            {/* warm glow behind the crest, echoing the reference's orb */}
+            <div className="absolute left-1/2 top-[22%] -translate-x-1/2 w-64 h-64 rounded-full bg-[radial-gradient(circle,rgba(255,160,120,0.45),transparent_68%)] pointer-events-none" aria-hidden="true" />
+
+            <div className="relative flex flex-col items-center">
+              <div className="animate-orb w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white p-3 border-4 border-white shadow-[0_18px_40px_-14px_rgba(242,104,58,0.55)] mb-7">
+                <img src={clubLogo} alt={`${clubInfo.name} crest`} className="w-full h-full object-contain" />
+              </div>
+
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-subtle">
+                Vellur · Kerala
+              </p>
+
+              <h1 className="mt-3 font-display text-[38px] sm:text-[52px] leading-[1.02] font-medium text-ink tracking-tight">
+                <span className="font-bold">Universal</span>
+                <br />
+                Arts &amp; Sports Club
+              </h1>
+
+              <p className="mt-5 text-sm sm:text-base text-ink-muted max-w-sm leading-relaxed">
+                {clubInfo.tagline}
+              </p>
+              <p className="mt-1.5 text-xs text-ink-subtle max-w-sm">{clubInfo.taglineMl}</p>
+
+              <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
+                <Link
+                  to="/events"
+                  className="inline-flex items-center gap-2 h-12 pl-6 pr-1.5 rounded-full bg-white text-ink text-sm font-bold shadow-[0_12px_28px_-14px_rgba(70,50,90,0.5)] hover:shadow-[0_14px_30px_-12px_rgba(242,104,58,0.55)] transition-all"
+                >
+                  Club events
+                  <span className="w-9 h-9 rounded-full bg-ember text-white flex items-center justify-center">
+                    <FiArrowUpRight />
+                  </span>
+                </Link>
+                <Link to="/services" className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors px-3">
+                  What we do
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl shrink-0 font-bold">
-              <FiCalendar />
+          {/* Slider card */}
+          {hasSlides && (
+            <div className="lg:col-span-7 flex">
+              <HomeSlider slides={slides} />
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">15+</p>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Annual Events</p>
-            </div>
-          </div>
+          )}
+        </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-mint-50 bg-[#E3F9F0] text-[#0FA968] flex items-center justify-center text-xl shrink-0 font-bold">
-              <FiTarget />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">4</p>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sports Arenas</p>
-            </div>
-          </div>
+        {/* Up-next pill + stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+          {nextEvent && (
+            <button
+              type="button"
+              onClick={() => setSelectedEvent(nextEvent)}
+              className="glass lg:col-span-5 rounded-full p-2.5 pr-3 flex items-center gap-4 text-left group"
+            >
+              {nextEvent.image ? (
+                <img
+                  src={nextEvent.image}
+                  alt=""
+                  className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white"
+                />
+              ) : (
+                <span className="orb w-14 h-14 shrink-0 border-2 border-white" aria-hidden="true" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">Latest event</p>
+                <p className="font-display text-base font-semibold text-ink truncate">{nextEvent.title}</p>
+                <p className="text-xs text-ink-muted truncate">
+                  {nextEvent.category} <span className="mx-1.5 text-ink-subtle">|</span> {nextEvent.date}
+                </p>
+              </div>
+              <span className="w-11 h-11 shrink-0 rounded-full bg-white text-ember flex items-center justify-center shadow-[0_8px_20px_-10px_rgba(242,104,58,0.6)] group-hover:bg-ember group-hover:text-white transition-all">
+                <FiPlay className="fill-current ml-0.5" />
+              </span>
+            </button>
+          )}
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center text-xl shrink-0 font-bold">
-              <FiUsers />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">100%</p>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Community Synergized</p>
-            </div>
+          <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 ${nextEvent ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
+            {STATS.map((s) => (
+              <div key={s.label} className="glass rounded-[26px] px-5 py-4">
+                <p className="font-display text-2xl sm:text-3xl font-semibold text-ink leading-none">{s.value}</p>
+                <p className="text-[11px] font-medium text-ink-muted mt-1.5">{s.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 3. Upcoming Programs Rail ("Coming Soon") */}
-      {comingSoonPrograms.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-violet-500" />
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
-                  Exclusive Tournaments & Camps
-                </span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-                Coming Soon Programs
-              </h2>
-            </div>
+      {/* 2. Activities — abstract gradient tiles */}
+      {services.length > 0 && (
+        <section>
+          <SectionHeading
+            eyebrow="Arts & sports"
+            title="What we"
+            strong="do"
+            action={<SeeAll to="/services">All activities</SeeAll>}
+          />
 
-            <Link
-              to="/programs"
-              className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 hover:text-slate-600 transition-colors"
-            >
-              See all ({programs.length}) <FiChevronRight />
-            </Link>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
+            {services.slice(0, 4).map((svc, i) => {
+              const tile = ACTIVITY_TILES[svc.id] || ACTIVITY_TILES.community;
+              const Icon = tile.icon;
+              return (
+                <Link
+                  key={svc.id}
+                  to="/services"
+                  className={`rim group relative rounded-[32px] ${i === 0 ? 'col-span-2' : ''} ${i === 3 ? 'col-span-2 lg:col-span-1' : ''}`}
+                >
+                  <div className="relative h-56 sm:h-72 overflow-hidden rounded-[26px]" style={{ background: tile.gradient }}>
+                    {/* soft blurred blobs give the painterly feel of the reference tiles */}
+                    <div className="absolute -top-10 -left-6 w-48 h-48 rounded-full bg-white/40 blur-3xl" aria-hidden="true" />
+                    <div className="absolute bottom-6 right-0 w-40 h-40 rounded-full bg-white/30 blur-2xl group-hover:scale-125 transition-transform duration-700" aria-hidden="true" />
+                    <Icon className="absolute top-5 right-5 text-5xl sm:text-6xl text-white/80 drop-shadow-sm" aria-hidden="true" />
+                    <div className="absolute inset-0 fade-light" />
+                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-ink-muted">{svc.category}</p>
+                        <h3 className="font-display text-xl sm:text-2xl font-semibold text-ink leading-tight">{svc.title}</h3>
+                      </div>
+                      <span className="hidden sm:flex shrink-0 w-10 h-10 rounded-full bg-white text-ember items-center justify-center group-hover:bg-ember group-hover:text-white transition-all">
+                        <FiArrowUpRight />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
+        </section>
+      )}
 
-          {/* Desktop/Tablet Grid & Mobile Horizontal Snapping Rail */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-x-auto pb-2">
+      {/* 3. Coming Soon Programs */}
+      {comingSoonPrograms.length > 0 && (
+        <section>
+          <SectionHeading
+            eyebrow="Tournaments & camps"
+            title="Coming"
+            strong="soon"
+            action={<SeeAll to="/programs">See all ({programs.length})</SeeAll>}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
             {comingSoonPrograms.map((prog) => (
               <ProgramCard
                 key={prog.id}
@@ -116,188 +245,177 @@ export default function Home() {
         </section>
       )}
 
-      {/* 4. Upcoming Events Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
-                Official Calendar
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-              Upcoming Club Events
-            </h2>
-          </div>
+      {/* 4. Upcoming Events with pill filters */}
+      <section>
+        <SectionHeading
+          eyebrow="Club calendar"
+          title="Club"
+          strong="events"
+          action={<SeeAll to="/events">All events</SeeAll>}
+        />
 
-          <Link
-            to="/events"
-            className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 hover:text-slate-600 transition-colors"
-          >
-            All Events <FiChevronRight />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {upcomingEvents.map((evt) => (
-            <EventCard
-              key={evt.id}
-              event={evt}
-              isFav={isFavourite(evt.id)}
-              onToggleFav={() => toggleFavourite(evt.id)}
-              onClick={() => setSelectedEvent(evt)}
-            />
+        <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 mb-5 -mx-1 px-1">
+          {eventCategories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setEventFilter(cat)}
+              className={`pill ${eventFilter === cat ? 'pill-active' : ''}`}
+            >
+              {cat}
+            </button>
           ))}
         </div>
+
+        {filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredEvents.map((evt) => (
+              <EventCard
+                key={evt.id}
+                event={evt}
+                isFav={isFavourite(evt.id)}
+                onToggleFav={() => toggleFavourite(evt.id)}
+                onClick={() => setSelectedEvent(evt)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass rounded-[30px] p-10 text-center text-sm text-ink-muted">
+            No events in this category yet.
+          </div>
+        )}
       </section>
 
-      {/* 5. Membership Promo Card (₹200 / Year Hero Card) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl bg-[#0A0A0B] text-white p-8 sm:p-12 lg:p-16 shadow-2xl">
-          {/* Background Ambient Accents */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 5. Membership — pass card + conversation card */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
 
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            <div className="lg:col-span-8 space-y-6">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/30 text-xs font-black uppercase tracking-wider">
-                <FiAward /> Annual Club Membership
-              </span>
+        <div className="glass relative overflow-hidden lg:col-span-7 rounded-[34px] p-7 sm:p-10">
+          <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full bg-[radial-gradient(circle,rgba(255,170,140,0.45),transparent_70%)] pointer-events-none" aria-hidden="true" />
 
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                Unlock Full Club Access for Just <span className="text-amber-400">₹200 / Year</span>
-              </h2>
-
-              <p className="text-sm sm:text-base text-slate-400 max-w-2xl leading-relaxed">
-                Become an official member of Universal Sports & Arts Club. Gain immediate entry to our athletic training zones, priority court bookings, tournament participation, and an official Digital Membership ID Pass.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-200">
-                  <FiCheckCircle className="text-amber-400 text-base shrink-0" />
-                  <span>Official Digital Pass with CLUB-ID</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-200">
-                  <FiCheckCircle className="text-amber-400 text-base shrink-0" />
-                  <span>Free entry to club fitness workshops</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-200">
-                  <FiCheckCircle className="text-amber-400 text-base shrink-0" />
-                  <span>Badminton synthetic court privileges</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-200">
-                  <FiCheckCircle className="text-amber-400 text-base shrink-0" />
-                  <span>Community tournaments & social events</span>
-                </div>
+          <div className="relative grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="orb w-10 h-10" aria-hidden="true" />
+                <span className="font-display text-xl font-bold text-ink">Membership</span>
               </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-                <Button
-                  onClick={() => navigate('/membership')}
-                  variant="amber"
-                  size="lg"
-                  iconRight={FiArrowRight}
-                >
-                  {isMember ? 'View My Membership ID' : 'Apply for Membership (₹200)'}
-                </Button>
-
+              <h2 className="font-display text-3xl sm:text-4xl font-medium text-ink tracking-tight leading-[1.1]">
+                The whole club for <span className="font-bold">₹200</span> a year.
+              </h2>
+              <p className="mt-4 text-sm text-ink-muted leading-relaxed">
+                Be part of Vellur's arts &amp; sports family — club events, matches, community drives and an official digital ID card.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Link
-                  to="/about"
-                  className="text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                  to="/membership"
+                  className="inline-flex items-center gap-2 h-12 pl-6 pr-1.5 rounded-full bg-white text-ink text-sm font-bold shadow-[0_12px_28px_-14px_rgba(70,50,90,0.5)] hover:shadow-[0_14px_30px_-12px_rgba(242,104,58,0.55)] transition-all"
                 >
-                  Explore club mission & history →
+                  {isMember ? 'View my ID card' : 'Apply now'}
+                  <span className="w-9 h-9 rounded-full bg-ember text-white flex items-center justify-center">
+                    <FiArrowUpRight />
+                  </span>
+                </Link>
+                <Link to="/about" className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors px-2">
+                  Our story
                 </Link>
               </div>
             </div>
 
-            {/* Right Mini ID Card Graphic */}
-            <div className="lg:col-span-4 flex justify-center">
-              <div className="w-full max-w-xs p-6 rounded-2xl bg-[#0F172A] border border-[#1E293B] space-y-4 shadow-xl select-none">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center text-xs font-black">
-                      USAC
-                    </div>
-                    <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Universal Pass</span>
-                  </div>
-                  <span className="text-[9px] font-mono text-slate-400">2026-27</span>
-                </div>
+            {/* "Others"-style perk menu */}
+            <div className="rounded-[28px] bg-white/55 border border-white p-3">
+              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">Included</p>
+              <ul>
+                {MEMBER_PERKS.map(({ icon: Icon, label }) => (
+                  <li key={label} className="flex items-center gap-3.5 px-3 py-3.5 text-sm font-medium text-ink">
+                    <Icon className="text-lg text-ink-muted shrink-0" />
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-14 rounded-xl bg-slate-800 border border-amber-400/50 flex items-center justify-center text-amber-400 font-bold text-xs">
-                    PHOTO
-                  </div>
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-xs font-bold text-white">YOUR NAME</p>
-                    <p className="text-[10px] font-mono text-amber-400">CLUB-XXXXXX</p>
-                    <p className="text-[9px] text-slate-400">Valid: 1 Year</p>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/10 text-center">
-                  <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest">
-                    ★ OFFICIAL MEMBER PASS ★
-                  </span>
-                </div>
+        {/* Conversation card */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          <div className="glass relative overflow-hidden rounded-[34px] p-6 sm:p-7 flex-1">
+            <div className="dot-grid absolute inset-0 pointer-events-none opacity-70" aria-hidden="true" />
+            <div className="relative space-y-5">
+              <div className="text-right">
+                <p className="inline-flex items-center gap-2 text-sm font-bold text-ink">
+                  <span className="orb w-5 h-5" aria-hidden="true" /> You
+                </p>
+                <p className="mt-2 text-sm text-ink-muted leading-relaxed">
+                  I'd love to get involved with the club, but I don't know anyone yet. Where do I start?
+                </p>
+              </div>
+              <div className="h-px bg-black/5" />
+              <div>
+                <p className="inline-flex items-center gap-2 text-sm font-bold text-ink">
+                  <span className="orb w-5 h-5" aria-hidden="true" /> Universal Club
+                </p>
+                <p className="mt-2 text-sm text-ink-muted leading-relaxed">
+                  Just come along 🌿 Our Onam games, matches and clean-up drives are open to everyone in Vellur.
+                  Message us on Instagram and we'll tell you what's coming up next.
+                </p>
               </div>
             </div>
-
           </div>
+
+          <a
+            href={clubInfo.socials.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="glass-strong rounded-full h-14 pl-6 pr-2 flex items-center justify-between gap-3 text-sm text-ink-subtle hover:text-ink transition-colors"
+          >
+            <span className="inline-flex items-center gap-2">
+              <FiInstagram /> Message us on Instagram…
+            </span>
+            <span className="w-10 h-10 rounded-full bg-ember-soft text-ember flex items-center justify-center">
+              <FiSend />
+            </span>
+          </a>
         </div>
       </section>
 
-      {/* 6. Latest News Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-sky-500" />
-            <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
-              Bulletin & Achievements
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-            Latest Club News
-          </h2>
-        </div>
+      {/* 6. Latest News */}
+      {latestNews.length > 0 && (
+        <section>
+          <SectionHeading eyebrow="Proud moments" title="Latest" strong="news" />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {latestNews.map((item) => (
-            <article
-              key={item.id}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div className="aspect-[16/10] overflow-hidden bg-slate-100">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {latestNews.map((item) => (
+              <article key={item.id} className="glass rounded-[30px] p-2 flex flex-col">
+                <div className="aspect-[16/10] overflow-hidden rounded-[24px] bg-white">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                    />
+                  ) : (
+                    <MediaPlaceholder label={item.category} />
+                  )}
+                </div>
 
-              <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
-                    <span className="font-bold text-slate-900">{item.category}</span>
+                <div className="px-3 pt-4 pb-3 flex-1 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-[11px] text-ink-muted">
+                    <span className="font-semibold text-ink">{item.category}</span>
+                    <span className="w-1 h-1 rounded-full bg-ink-subtle" />
                     <span>{item.date}</span>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 leading-snug">
+                  <h3 className="font-display text-lg font-semibold text-ink leading-snug">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
+                  <p className="text-xs text-ink-muted line-clamp-3 leading-relaxed">
                     {item.content}
                   </p>
+                  <p className="mt-auto pt-2 text-[11px] text-ink-subtle">{item.author}</p>
                 </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                  <span>Author: {item.author}</span>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Event Details Modal Dialog */}
       <Modal
@@ -308,12 +426,16 @@ export default function Home() {
       >
         {selectedEvent && (
           <div className="space-y-5">
-            <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100">
-              <img
-                src={selectedEvent.image}
-                alt={selectedEvent.title}
-                className="w-full h-full object-cover"
-              />
+            <div className="aspect-[16/9] rounded-[24px] overflow-hidden bg-slate-100">
+              {selectedEvent.image ? (
+                <img
+                  src={selectedEvent.image}
+                  alt={selectedEvent.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <MediaPlaceholder label={selectedEvent.category} />
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -325,17 +447,17 @@ export default function Home() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium">
               <div className="flex items-center gap-2">
-                <FiCalendar className="text-amber-500 text-base" />
+                <FiCalendar className="text-ember text-base" />
                 <span><strong>Date:</strong> {selectedEvent.date}</span>
               </div>
               <div className="flex items-center gap-2">
-                <FiClock className="text-amber-500 text-base" />
-                <span><strong>Time:</strong> {selectedEvent.time || 'TBA'}</span>
+                <FiClock className="text-ember text-base" />
+                <span><strong>Day / time:</strong> {selectedEvent.time || '—'}</span>
               </div>
               <div className="flex items-center gap-2 sm:col-span-2">
-                <FiMapPin className="text-sky-500 text-base shrink-0" />
+                <FiMapPin className="text-ember text-base shrink-0" />
                 <span><strong>Venue:</strong> {selectedEvent.location}</span>
               </div>
             </div>
@@ -380,7 +502,7 @@ export default function Home() {
       >
         {selectedProgram && (
           <div className="space-y-5">
-            <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-900">
+            <div className="aspect-[16/9] rounded-[24px] overflow-hidden bg-slate-900">
               <img
                 src={selectedProgram.posterUrl}
                 alt={selectedProgram.title}
@@ -389,23 +511,23 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-violet-600 text-white font-extrabold text-xs uppercase tracking-wider">
-                Coming Soon
+              <span className="px-3 py-1 rounded-full bg-ember-soft text-ember font-bold text-xs">
+                Coming soon
               </span>
               <Chip label={selectedProgram.category} />
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
               <div className="flex items-center gap-2">
-                <FiCalendar className="text-violet-500 text-base" />
+                <FiCalendar className="text-ember text-base" />
                 <span><strong>Scheduled:</strong> {selectedProgram.date}</span>
               </div>
               <div className="flex items-center gap-2">
-                <FiClock className="text-violet-500 text-base" />
+                <FiClock className="text-ember text-base" />
                 <span><strong>Time:</strong> {selectedProgram.time}</span>
               </div>
               <div className="flex items-center gap-2 sm:col-span-2">
-                <FiMapPin className="text-sky-500 text-base shrink-0" />
+                <FiMapPin className="text-ember text-base shrink-0" />
                 <span><strong>Venue:</strong> {selectedProgram.location}</span>
               </div>
             </div>

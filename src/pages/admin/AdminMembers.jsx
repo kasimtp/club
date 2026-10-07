@@ -127,13 +127,13 @@ export default function AdminMembers() {
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900">Official Members Roster</h1>
-          <p className="text-xs text-slate-400">Directory of verified club members, renewals, and offline record transcription</p>
+          <h1 className="font-display text-xl font-bold text-ink">Official Members Roster</h1>
+          <p className="text-xs text-ink-subtle">Directory of verified club members, renewals, and offline record transcription</p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative w-full md:w-72">
-            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle text-sm" />
             <input
               type="text"
               value={searchQuery}
@@ -168,12 +168,12 @@ export default function AdminMembers() {
       </div>
 
       {/* Members Table */}
-      <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+      <div className="p-6 rounded-[30px] glass space-y-4">
         {filteredMembers.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+            <table className="w-full text-left text-xs text-ink">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-black/5 text-ink-subtle font-bold uppercase tracking-wider text-[10px]">
                   <th className="pb-3">Member & ID</th>
                   <th className="pb-3">Contact</th>
                   <th className="pb-3">Term Validity</th>
@@ -182,36 +182,36 @@ export default function AdminMembers() {
                   <th className="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-black/5">
                 {filteredMembers.map((m) => {
                   const isExpired = m.expiryDate && new Date(m.expiryDate) < new Date();
                   const isLinked = Boolean(m.userId);
 
                   return (
-                    <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={m.id} className="hover:bg-white/50 transition-colors">
                       <td className="py-3.5 pr-3 flex items-center gap-3">
                         <Avatar src={m.photoURL || m.profilePhoto} name={m.name} size="md" />
                         <div>
-                          <span className="font-bold text-slate-900 block">{m.name || m.fullName}</span>
-                          <span className="font-mono font-black text-amber-600 text-[10px]">{m.membershipId || 'No ID'}</span>
+                          <span className="font-bold text-ink block">{m.name || m.fullName}</span>
+                          <span className="font-mono font-bold text-ember text-[10px]">{m.membershipId || 'No ID'}</span>
                         </div>
                       </td>
                       <td className="py-3.5 pr-3">
-                        <p className="font-medium text-slate-800">{m.email}</p>
-                        <p className="text-slate-400 font-mono">{m.phone || m.mobile}</p>
+                        <p className="font-medium text-ink">{m.email}</p>
+                        <p className="text-ink-subtle font-mono">{m.phone || m.mobile}</p>
                       </td>
                       <td className="py-3.5 pr-3">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                           isExpired ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
                         }`}>
                           {isExpired ? 'Expired' : 'Active Pass'}
                         </span>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
+                        <p className="text-[10px] text-ink-subtle mt-0.5">
                           Exp: {m.expiryDate ? new Date(m.expiryDate).toLocaleDateString() : '1 Year'}
                         </p>
                       </td>
                       <td className="py-3.5 pr-3">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase">
+                        <span className="text-[10px] text-ink-muted font-bold uppercase">
                           {m.source === 'old_record' ? 'Paper Archive' : 'Online Form'}
                         </span>
                       </td>
@@ -224,7 +224,7 @@ export default function AdminMembers() {
                           <button
                             type="button"
                             onClick={() => openLinkModal(m)}
-                            className="text-amber-600 hover:underline font-bold text-[11px] inline-flex items-center gap-1"
+                            className="text-ember hover:underline font-bold text-[11px] inline-flex items-center gap-1"
                           >
                             <FiLink /> Link Account
                           </button>
@@ -235,7 +235,7 @@ export default function AdminMembers() {
                           <button
                             type="button"
                             onClick={() => setSelectedMember(m)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                            className="p-1.5 rounded-lg bg-white/70 hover:bg-white text-ink transition-colors"
                             title="View Digital Pass"
                           >
                             <FiEye />
@@ -244,7 +244,7 @@ export default function AdminMembers() {
                           <button
                             type="button"
                             onClick={() => renewMemberRecord(m.id, 'Admin')}
-                            className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-white font-bold text-[10px] transition-all flex items-center gap-1"
+                            className="px-2.5 py-1 rounded-full bg-ember hover:bg-[#E0582B] text-white font-bold text-[10px] transition-all flex items-center gap-1"
                             title="Extend 1 Year"
                           >
                             <FiRefreshCw /> +1 Yr
@@ -254,7 +254,7 @@ export default function AdminMembers() {
                             <button
                               type="button"
                               onClick={() => unlinkMember(m.id)}
-                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-[10px] font-bold transition-all"
+                              className="px-2 py-1 rounded-lg bg-white/70 hover:bg-red-50 text-ink-muted hover:text-red-600 text-[10px] font-bold transition-all"
                             >
                               Unlink
                             </button>
@@ -268,8 +268,8 @@ export default function AdminMembers() {
             </table>
           </div>
         ) : (
-          <div className="py-12 text-center text-slate-400 space-y-2">
-            <FiAward className="text-4xl mx-auto text-slate-300" />
+          <div className="py-12 text-center text-ink-subtle space-y-2">
+            <FiAward className="text-4xl mx-auto text-ink-subtle" />
             <p className="text-xs">No members found.</p>
           </div>
         )}
@@ -303,12 +303,12 @@ export default function AdminMembers() {
       >
         <form onSubmit={handleAddSubmit} className="space-y-4 text-left">
           
-          <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/60 border border-white">
+            <div className="w-16 h-16 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
               {addForm.photoURL ? (
                 <img src={addForm.photoURL} alt="Preview" className="w-full h-full object-cover" />
               ) : (
-                <FiUser className="text-2xl text-slate-400" />
+                <FiUser className="text-2xl text-ink-subtle" />
               )}
             </div>
             <div className="flex-1">
@@ -317,7 +317,7 @@ export default function AdminMembers() {
                 type="file"
                 accept="image/*"
                 onChange={handlePhotoUpload}
-                className="text-xs text-slate-600"
+                className="text-xs text-ink-muted"
               />
             </div>
           </div>
@@ -425,16 +425,16 @@ export default function AdminMembers() {
                 <div
                   key={u.uid}
                   onClick={() => handleLinkUser(u)}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-400 flex items-center justify-between cursor-pointer transition-all"
+                  className="p-3 rounded-xl bg-white/60 hover:bg-ember-soft border border-white hover:border-ember flex items-center justify-between cursor-pointer transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar src={u.profilePhoto} name={u.name} size="sm" />
                     <div>
-                      <span className="font-bold text-slate-900 block text-xs">{u.name}</span>
-                      <span className="text-[10px] text-slate-400">{u.email}</span>
+                      <span className="font-bold text-ink block text-xs">{u.name}</span>
+                      <span className="text-[10px] text-ink-subtle">{u.email}</span>
                     </div>
                   </div>
-                  <span className="text-amber-600 font-bold text-xs">Select →</span>
+                  <span className="text-ember font-bold text-xs">Select →</span>
                 </div>
               ))}
           </div>

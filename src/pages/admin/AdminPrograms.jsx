@@ -17,7 +17,7 @@ export default function AdminPrograms() {
     description: '',
     date: 'Oct 25, 2026',
     time: '08:30 AM',
-    location: 'Universal Sports Complex',
+    location: 'Vellur',
     category: 'Tournament',
     posterUrl: ''
   });
@@ -50,7 +50,7 @@ export default function AdminPrograms() {
         description: '',
         date: 'Oct 25, 2026',
         time: '08:30 AM',
-        location: 'Universal Sports Complex',
+        location: 'Vellur',
         category: 'Tournament',
         posterUrl: ''
       });
@@ -65,8 +65,8 @@ export default function AdminPrograms() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900">Upcoming Programs & Tournaments Publisher</h1>
-          <p className="text-xs text-slate-400">Publish upcoming competitions, athletic camps, and community tournaments</p>
+          <h1 className="font-display text-xl font-bold text-ink">Upcoming Programs & Tournaments Publisher</h1>
+          <p className="text-xs text-ink-subtle">Publish upcoming competitions, athletic camps, and community tournaments</p>
         </div>
 
         <Button
@@ -80,14 +80,25 @@ export default function AdminPrograms() {
       </div>
 
       {/* Programs List */}
+      {programs.length === 0 && (
+        <div className="glass rounded-[30px] p-10 text-center space-y-3">
+          <div className="orb w-12 h-12 mx-auto" aria-hidden="true" />
+          <h3 className="font-display text-lg font-semibold text-ink">No programs published</h3>
+          <p className="text-sm text-ink-muted max-w-sm mx-auto">Announce an upcoming tournament or programme and it will appear on the home page and the Programs page.</p>
+          <Button variant="primary" size="sm" icon={FiPlus} onClick={() => setIsAddOpen(true)}>
+            New program
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {programs.map((prog) => (
           <div
             key={prog.id}
-            className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4 flex flex-col justify-between"
+            className="p-5 rounded-[30px] glass space-y-4 flex flex-col justify-between"
           >
             <div className="space-y-3">
-              <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-900">
+              <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-ink">
                 <img
                   src={prog.posterUrl || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80'}
                   alt={prog.title}
@@ -96,28 +107,28 @@ export default function AdminPrograms() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-800 text-[10px] font-extrabold uppercase">
+                <span className="px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-800 text-[10px] font-semibold uppercase">
                   Coming Soon
                 </span>
                 <Chip label={prog.category || 'Tournament'} size="sm" />
               </div>
 
-              <h3 className="text-base font-bold text-slate-900 line-clamp-1">{prog.title}</h3>
-              <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{prog.description}</p>
+              <h3 className="font-display text-base font-bold text-ink line-clamp-1">{prog.title}</h3>
+              <p className="text-xs text-ink-muted line-clamp-2 leading-relaxed">{prog.description}</p>
 
-              <div className="pt-2 border-t border-slate-100 space-y-1 text-xs text-slate-600">
+              <div className="pt-2 border-t border-black/5 space-y-1 text-xs text-ink-muted">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <FiCalendar className="text-amber-500" />
+                  <FiCalendar className="text-ember" />
                   <span>{prog.date} • {prog.time}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-400 truncate">
+                <div className="flex items-center gap-1.5 text-ink-subtle truncate">
                   <FiMapPin className="text-sky-500 shrink-0" />
                   <span className="truncate">{prog.location}</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-black/5 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -160,7 +171,7 @@ export default function AdminPrograms() {
               type="file"
               accept="image/*"
               onChange={handlePosterUpload}
-              className="form-input pt-2.5 text-xs text-slate-600"
+              className="form-input pt-2.5 text-xs text-ink-muted"
             />
           </div>
 

@@ -1,38 +1,58 @@
-// Admin Layout: Desktop Left Sidebar, Mobile Drawer, Live Sync Status, and Top Bar
+// Admin Layout ("Sense" soft-glass theme): glass sidebar, mobile drawer, and floating top bar
 import React, { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  FiGrid, FiUsers, FiFileText, FiAward, FiSliders, 
-  FiCalendar, FiImage, FiLogOut, FiHome, FiMenu, FiX, 
-  FiShield 
+import {
+  FiGrid, FiUsers, FiFileText, FiAward, FiSliders,
+  FiCalendar, FiImage, FiLogOut, FiHome, FiMenu, FiX, FiArrowUpRight, FiStar, FiFlag
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useClubData } from '../context/ClubDataContext';
 import Avatar from '../components/ui/Avatar';
 import clubLogo from '../assets/club-logo.webp';
 
+const PAGE_TITLES = {
+  dashboard: ['Overview', 'Dashboard'],
+  users: ['People', 'Registered users'],
+  requests: ['Membership', 'Applications'],
+  members: ['Membership', 'Members directory'],
+  slides: ['Website', 'Hero slides'],
+  programs: ['Website', 'Programs'],
+  gallery: ['Website', 'Gallery'],
+  events: ['Website', 'Events'],
+  news: ['Website', 'News'],
+};
+
 export default function AdminLayout() {
   const { user, logout } = useAuth();
-  const { requests } = useClubData();
+  const { requests, loadError } = useClubData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const section = location.pathname.split('/')[2] || 'dashboard';
+  const [eyebrow, pageTitle] = PAGE_TITLES[section] || ['Admin', section.replace('-', ' ')];
 
-  const adminNavItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: FiGrid },
-    { name: 'Registered Users', path: '/admin/users', icon: FiUsers },
-    { 
-      name: 'Applications Queue', 
-      path: '/admin/requests', 
-      icon: FiFileText,
-      badge: pendingCount > 0 ? pendingCount : null
+  const navGroups = [
+    {
+      label: 'General',
+      items: [
+        { name: 'Dashboard', path: '/admin/dashboard', icon: FiGrid },
+        { name: 'Registered Users', path: '/admin/users', icon: FiUsers },
+        { name: 'Applications', path: '/admin/requests', icon: FiFileText, badge: pendingCount > 0 ? pendingCount : null },
+        { name: 'Members', path: '/admin/members', icon: FiAward },
+      ],
     },
-    { name: 'Members Directory', path: '/admin/members', icon: FiAward },
-    { name: 'Hero Slider CMS', path: '/admin/slides', icon: FiSliders },
-    { name: 'Programs CMS', path: '/admin/programs', icon: FiCalendar },
-    { name: 'Gallery CMS', path: '/admin/gallery', icon: FiImage },
+    {
+      label: 'Website',
+      items: [
+        { name: 'Hero Slides', path: '/admin/slides', icon: FiSliders },
+        { name: 'Events', path: '/admin/events', icon: FiFlag },
+        { name: 'News', path: '/admin/news', icon: FiStar },
+        { name: 'Programs', path: '/admin/programs', icon: FiCalendar },
+        { name: 'Gallery', path: '/admin/gallery', icon: FiImage },
+      ],
+    },
   ];
 
   const handleSignOut = () => {
@@ -41,160 +61,158 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F8F9] flex flex-col md:flex-row text-slate-900 font-sans">
-      
-      {/* Mobile Admin Header */}
-      <div className="md:hidden bg-slate-950 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 shadow-md">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center">
-            <img src={clubLogo} alt="Club Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase text-amber-400 leading-tight">Admin Console</h2>
-            <p className="text-[9px] text-slate-400">Universal Club Management</p>
-          </div>
-        </div>
+    <div className="relative isolate min-h-screen flex text-ink font-sans">
+      <div className="sense-canvas fixed inset-0 -z-10 pointer-events-none" aria-hidden="true" />
 
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors"
-          aria-label="Toggle admin navigation"
-        >
-          {mobileMenuOpen ? <FiX className="text-xl" /> : <FiMenu className="text-xl" />}
-        </button>
-      </div>
-
-      {/* Mobile Drawer Overlay */}
+      {/* Mobile drawer overlay */}
       {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+        <div
+          className="fixed inset-0 bg-[#2A292E]/30 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Left Sidebar (Desktop Fixed & Mobile Slide Drawer) */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-slate-950 text-white flex flex-col justify-between border-r border-slate-900 transition-transform duration-300 md:static md:translate-x-0
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
-        {/* Top Brand & Title */}
-        <div className="p-6 border-b border-slate-900">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white p-1.5 flex items-center justify-center shadow-md">
-              <img src={clubLogo} alt="Club Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-tight text-white">Universal Club</h2>
-              <span className="inline-block px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-400 font-extrabold text-[9px] uppercase tracking-wider">
-                Admin Center
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="p-4 space-y-1 overflow-y-auto flex-1 custom-scrollbar">
-          <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
-            Operations & CMS
-          </div>
-
-          {adminNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-
-            return (
-              <NavLink
-                key={item.name}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? 'bg-amber-400 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="text-base shrink-0" />
-                  <span>{item.name}</span>
-                </div>
-
-                {item.badge && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                    isActive ? 'bg-slate-950 text-white' : 'bg-red-500 text-white'
-                  }`}>
-                    {item.badge}
-                  </span>
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* Bottom Profile & Actions */}
-        <div className="p-4 border-t border-slate-900 space-y-3">
-          <div className="flex items-center gap-3 px-2 py-1">
-            <Avatar src={user?.profilePhoto} name={user?.name || 'Admin'} size="sm" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate">{user?.name || 'Administrator'}</p>
-              <p className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@universalclub.com'}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <Link
-              to="/"
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors"
-            >
-              <FiHome className="text-sm" /> Public Site
+      {/* Sidebar: fixed drawer on mobile, sticky glass panel on desktop */}
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[280px] shrink-0 p-3 lg:p-4 transition-transform duration-300 lg:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="glass h-full rounded-[32px] flex flex-col">
+          {/* Brand */}
+          <div className="p-5 pb-4 flex items-center justify-between gap-3">
+            <Link to="/admin/dashboard" className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-full bg-white p-1.5 shrink-0 shadow-[0_8px_20px_-10px_rgba(242,104,58,0.6)]">
+                <img src={clubLogo} alt="Club logo" className="w-full h-full object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-display text-lg font-bold leading-none text-ink">Universal</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-subtle mt-1">Admin console</p>
+              </div>
             </Link>
-
             <button
-              type="button"
-              onClick={handleSignOut}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs font-bold transition-all"
+              onClick={() => setMobileMenuOpen(false)}
+              className="lg:hidden w-9 h-9 rounded-full bg-white text-ink-muted flex items-center justify-center"
+              aria-label="Close navigation"
             >
-              <FiLogOut className="text-sm" /> Sign Out
+              <FiX />
             </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="px-3 flex-1 overflow-y-auto custom-scrollbar space-y-5">
+            {navGroups.map((group) => (
+              <div key={group.label}>
+                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-subtle">{group.label}</p>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <NavLink
+                        key={item.name}
+                        to={item.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center justify-between gap-3 h-12 px-4 rounded-full text-sm transition-all ${
+                            isActive
+                              ? 'bg-white text-ink font-bold shadow-[0_10px_22px_-14px_rgba(70,50,90,0.45)]'
+                              : 'text-ink-muted font-medium hover:text-ink hover:bg-white/50'
+                          }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <span className="flex items-center gap-3 min-w-0">
+                              <Icon className={`text-lg shrink-0 ${isActive ? 'text-ember' : ''}`} />
+                              <span className="truncate">{item.name}</span>
+                            </span>
+                            {item.badge && (
+                              <span className="min-w-6 h-6 px-1.5 rounded-full bg-ember text-white text-[11px] font-bold flex items-center justify-center">
+                                {item.badge}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* Profile + actions */}
+          <div className="p-3">
+            <div className="rounded-[24px] bg-white/60 border border-white p-3 space-y-3">
+              <div className="flex items-center gap-3">
+                <Avatar src={user?.profilePhoto} name={user?.name || 'Admin'} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink truncate">{user?.name || 'Administrator'}</p>
+                  <p className="text-[11px] text-ink-subtle truncate">{user?.email || user?.username || 'Admin'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to="/"
+                  className="h-9 rounded-full bg-white text-ink text-xs font-semibold flex items-center justify-center gap-1.5 hover:shadow-[0_6px_14px_-8px_rgba(70,50,90,0.4)] transition-all"
+                >
+                  <FiHome /> Site
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="h-9 rounded-full bg-white text-red-600 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-red-500 hover:text-white transition-all"
+                >
+                  <FiLogOut /> Sign out
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
 
-      {/* Main Admin Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0">
-        
-        {/* Top Admin Bar on Desktop */}
-        <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-slate-200">
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-              Universal Club Administration
-            </span>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight capitalize">
-              {location.pathname.split('/')[2]?.replace('-', ' ') || 'Dashboard'}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Real-time Live Sync</span>
+      {/* Main column */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Floating top bar */}
+        <header className="sticky top-0 z-30 px-3 sm:px-6 lg:pl-2 lg:pr-8 pt-3 lg:pt-4">
+          <div className="glass rounded-full h-16 pl-2 sm:pl-6 pr-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="lg:hidden w-12 h-12 rounded-full bg-white text-ink flex items-center justify-center shrink-0"
+                aria-label="Open navigation"
+              >
+                <FiMenu className="text-lg" />
+              </button>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-subtle leading-none">{eyebrow}</p>
+                <h1 className="font-display text-lg sm:text-xl font-semibold text-ink capitalize truncate leading-tight mt-1">{pageTitle}</h1>
+              </div>
             </div>
 
             <Link
               to="/"
-              className="px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
+              className="inline-flex items-center gap-2 h-12 pl-4 sm:pl-5 pr-1.5 rounded-full bg-white text-ink text-xs font-bold whitespace-nowrap shadow-[0_8px_20px_-12px_rgba(70,50,90,0.45)]"
             >
-              View Public Website →
+              <span className="hidden sm:inline">View website</span>
+              <span className="sm:hidden">Site</span>
+              <span className="w-9 h-9 rounded-full bg-ember text-white flex items-center justify-center">
+                <FiArrowUpRight />
+              </span>
             </Link>
           </div>
-        </div>
+        </header>
 
-        {/* Dynamic Admin Page Route Outlet */}
-        <div className="p-4 sm:p-6 lg:p-8 flex-1 overflow-x-hidden">
+        {/* Page outlet */}
+        <main className="flex-1 px-3 sm:px-6 lg:pl-2 lg:pr-8 py-5 sm:py-6 overflow-x-hidden">
+          {loadError && (
+            <div role="alert" className="mb-5 rounded-[22px] bg-red-50 border border-red-100 px-5 py-4 text-sm text-red-700">
+              <strong className="font-semibold">Couldn't load club data.</strong> {loadError}
+            </div>
+          )}
           <Outlet />
-        </div>
-
+        </main>
       </div>
-
     </div>
   );
 }

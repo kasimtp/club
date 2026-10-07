@@ -191,7 +191,7 @@ export default function MemberProfile() {
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                 {isPending 
                   ? 'Your application is awaiting committee confirmation. Check back soon.'
-                  : 'Get unlimited access to gyms, courts, and tournaments for ₹200 / Year.'
+                  : 'Become an official member of Universal Vellur for ₹200 / Year.'
                 }
               </p>
               <div>

@@ -37,6 +37,7 @@ import AdminMembers from './pages/admin/AdminMembers';
 import AdminSlides from './pages/admin/AdminSlides';
 import AdminPrograms from './pages/admin/AdminPrograms';
 import AdminGallery from './pages/admin/AdminGallery';
+import AdminContent from './pages/admin/AdminContent';
 
 function App() {
   return (
@@ -80,6 +81,8 @@ function App() {
                 <Route path="slides" element={<AdminSlides />} />
                 <Route path="programs" element={<AdminPrograms />} />
                 <Route path="gallery" element={<AdminGallery />} />
+                <Route path="events" element={<AdminContent key="events" kind="events" />} />
+                <Route path="news" element={<AdminContent key="news" kind="news" />} />
               </Route>
 
               {/* Catch-all Redirect */}

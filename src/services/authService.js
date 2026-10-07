@@ -1,278 +1,224 @@
-// Authentication & User Profile Sync Service
-// Secure authentication without hardcoded backdoor vulnerabilities.
-// Manages Google Sign-In, Admin validation, Firestore user sync, and session caching.
+// Authentication & User Profile Service
+//
+// With Firebase configured:
+//   • Members sign in with Google (Firebase Auth). Their profile lives in Firestore `users/{uid}`
+//     (same schema as the mobile app) and is linked to their `members` record by uid or email.
+//   • Admins sign in with email + password (Firebase Auth). An account is an admin only if a
+//     Firestore document `admins/{uid}` exists with role 'admin' — nothing is hard-coded here.
+// Without Firebase (bare local development) a local demo admin and a mock Google user are used.
 
-import { auth, googleProvider, db, isFirebaseConfigured } from '../config/firebase';
-import { signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, googleProvider } from '../config/firebase';
+import {
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+} from 'firebase/auth';
+import { store, useCloud, serverTimestamp } from './store';
 import { memberService } from './memberService';
 
-const AUTH_USER_KEY = 'universal_club_auth_user';
-const USERS_STORE_KEY = 'universal_club_users_store';
-const ADMINS_STORE_KEY = 'universal_club_admins_store';
+const SESSION_KEY = 'universal_club_auth_user'; // cached session for instant UI; Firebase Auth is authoritative
 
-// Default initial admin accounts if none exist in Firestore
-const DEFAULT_ADMINS = [
-  {
-    username: 'clubadmin',
-    email: 'admin@universalclub.com',
-    passwordHash: 'adm12345', // In production verify against secure auth/hash
-    name: 'Club Administrator',
-    fullName: 'Club Administrator',
-    role: 'admin',
-    profilePhoto: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'
-  }
-];
-
-const loadLocal = (key, defaultVal) => {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : defaultVal;
-  } catch (err) {
-    return defaultVal;
-  }
+// ⚠ TEMPORARY TEST ADMIN shortcut — remove once the committee has its own admin accounts.
+// Typing the username `clubadmin` signs in to the real Firebase account TEST_ADMIN.email, so the
+// database security rules still apply (that account must exist and have an admins/{uid} document).
+// Pre-filled in `npm run dev`; on a deployed site only when VITE_ENABLE_TEST_ADMIN=true.
+export const testAdminEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_ADMIN === 'true';
+export const TEST_ADMIN = {
+  username: 'clubadmin',
+  password: 'adm12345',
+  email: import.meta.env.VITE_TEST_ADMIN_EMAIL || 'clubadmin@clubvellur.com',
 };
 
-const saveLocal = (key, val) => {
+const saveSession = (user) => {
   try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch (err) {
-    console.error(`Failed to save auth store key: ${key}`, err);
-  }
+    if (user) localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch { /* storage unavailable */ }
 };
+
+const FRIENDLY_AUTH_ERRORS = {
+  'auth/invalid-credential': 'Wrong email or password.',
+  'auth/wrong-password': 'Wrong email or password.',
+  'auth/user-not-found': 'Wrong email or password.',
+  'auth/invalid-email': 'Please enter a valid email address.',
+  'auth/too-many-requests': 'Too many attempts. Please wait a minute and try again.',
+  'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Authentication yet.',
+  'auth/popup-closed-by-user': 'Sign-in was cancelled.',
+  'auth/cancelled-popup-request': 'Sign-in was cancelled.',
+  'auth/popup-blocked': 'Your browser blocked the sign-in popup. Please allow popups for this site.',
+  'auth/unauthorized-domain': 'This website address is not authorised in Firebase Authentication → Settings → Authorized domains.',
+  'auth/network-request-failed': 'Network error — check your connection and try again.',
+};
+
+const friendly = (err) => new Error(FRIENDLY_AUTH_ERRORS[err?.code] || err?.message || 'Sign-in failed.');
+
+const deriveMembershipStatus = (record) => {
+  if (!record) return 'not_applied';
+  if (record.status === 'approved' && record.expiryDate && new Date(record.expiryDate) < new Date()) return 'expired';
+  return record.status || 'not_applied';
+};
+
+const adminSession = (fbUser, adminDoc) => ({
+  id: fbUser.uid,
+  uid: fbUser.uid,
+  name: adminDoc.name || adminDoc.fullName || fbUser.displayName || 'Administrator',
+  fullName: adminDoc.fullName || adminDoc.name || fbUser.displayName || 'Administrator',
+  email: fbUser.email,
+  username: adminDoc.username || fbUser.email,
+  role: 'admin',
+  membershipStatus: 'approved',
+  profilePhoto: adminDoc.profilePhoto || fbUser.photoURL || '',
+  authenticatedAt: new Date().toISOString(),
+});
 
 export const authService = {
-  /**
-   * Google Sign-In
-   * Attempts live Firebase popup, or creates a verified Google session.
-   */
-  signInWithGoogle: async () => {
-    let googleUser = null;
+  /** Cached session for the first paint; replaced by Firebase Auth state once it resolves */
+  getCurrentUser: () => {
+    try {
+      return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    } catch {
+      return null;
+    }
+  },
 
-    if (isFirebaseConfigured && auth && googleProvider) {
+  /** Returns the admin record for a Firebase user, or null */
+  getAdminRecord: async (uid) => {
+    if (!useCloud || !uid) return null;
+    const record = await store.get('admins', uid);
+    return record && (record.role || 'admin') === 'admin' ? record : null;
+  },
+
+  /** Builds the app session for a signed-in Firebase user (admin or member) */
+  resolveSession: async (fbUser) => {
+    const adminDoc = await authService.getAdminRecord(fbUser.uid);
+    const session = adminDoc ? adminSession(fbUser, adminDoc) : await authService.syncUserProfile(fbUser);
+    saveSession(session);
+    return session;
+  },
+
+  signInWithGoogle: async () => {
+    if (useCloud) {
       try {
         const result = await signInWithPopup(auth, googleProvider);
-        googleUser = result.user;
+        return authService.resolveSession(result.user);
       } catch (err) {
-        console.warn('Firebase popup sign-in warning:', err.message);
+        throw friendly(err);
       }
     }
+    // Local development only
+    const session = await authService.syncUserProfile({
+      uid: 'local_member',
+      displayName: 'Local Test Member',
+      email: 'member@localhost',
+      photoURL: '',
+    });
+    saveSession(session);
+    return session;
+  },
 
-    // If popup completed or fallback sandbox mock user
-    if (!googleUser) {
-      googleUser = {
-        uid: `goog_${Date.now()}`,
-        displayName: 'Sports Member',
-        email: 'member@gmail.com',
-        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        phoneNumber: null
-      };
+  loginAdmin: async (email, password) => {
+    if (!email || !password) throw new Error('Please enter both email and password.');
+
+    // Temporary shortcut: `clubadmin` → the test admin's Firebase account (see TEST_ADMIN above)
+    const usingTestAdmin = testAdminEnabled && email.trim().toLowerCase() === TEST_ADMIN.username;
+    if (usingTestAdmin) email = TEST_ADMIN.email;
+
+    if (useCloud) {
+      let cred;
+      try {
+        cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      } catch (err) {
+        if (usingTestAdmin && ['auth/invalid-credential', 'auth/user-not-found', 'auth/wrong-password'].includes(err?.code)) {
+          throw new Error(
+            `The test admin account doesn't exist yet. In Firebase → Authentication → Users, add ${TEST_ADMIN.email} ` +
+            `with password ${TEST_ADMIN.password}, then create Firestore document admins/<its UID> with role "admin".`,
+            { cause: err }
+          );
+        }
+        throw friendly(err);
+      }
+      const adminDoc = await authService.getAdminRecord(cred.user.uid);
+      if (!adminDoc) {
+        await firebaseSignOut(auth);
+        throw new Error(
+          `This account is not a club admin. Add a document admins/${cred.user.uid} with role "admin" in Firestore.`
+        );
+      }
+      const session = adminSession(cred.user, adminDoc);
+      saveSession(session);
+      return session;
     }
 
-    const syncedUser = await authService.syncUserProfile(googleUser);
-    saveLocal(AUTH_USER_KEY, syncedUser);
-    return syncedUser;
+    throw new Error('Invalid administrator credentials.');
   },
 
   /**
-   * Custom simulated Google Sign-in with explicit name & email (for testing)
-   */
-  signInWithMockGoogle: async ({ name, email, photoURL }) => {
-    const mockUser = {
-      uid: `goog_${Date.now()}`,
-      displayName: name || 'Google Member',
-      email: email || 'member@gmail.com',
-      photoURL: photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-      phoneNumber: null
-    };
-    const syncedUser = await authService.syncUserProfile(mockUser);
-    saveLocal(AUTH_USER_KEY, syncedUser);
-    return syncedUser;
-  },
-
-  /**
-   * Syncs user with Firestore users/{uid} and auto-links with members collection
+   * Creates / refreshes users/{uid} and links it to the matching `members` record (by uid or email),
+   * exactly like the mobile app. Existing fields written by the app (whatsapp, mobile, …) are kept.
    */
   syncUserProfile: async (fbUser) => {
     const uid = fbUser.uid;
-    const email = (fbUser.email || '').toLowerCase();
-    const allUsers = loadLocal(USERS_STORE_KEY, []);
-    const allMembers = await memberService.getMembers();
-    const allRequests = await memberService.getRequests();
+    const email = String(fbUser.email || '').toLowerCase();
+    // Only this person's records: by linked uid, or by their Google email (not the whole member list)
+    const [existing, byUid, byEmail] = await Promise.all([
+      store.get('users', uid),
+      store.findBy('members', 'userId', uid),
+      email ? store.findBy('members', 'email', fbUser.email) : [],
+    ]);
 
-    // Check if matching approved member exists
-    const matchingMember = allMembers.find(m => 
-      (m.userId && m.userId === uid) ||
-      (m.email && m.email.toLowerCase() === email)
-    );
+    const mine = [...byUid, ...byEmail.filter((m) => !byUid.some((u) => u.id === m.id))]
+      .sort((a, b) => (a.status === 'approved' ? -1 : b.status === 'approved' ? 1 : 0));
+    const record = mine[0] || null;
 
-    // Check if matching pending request exists
-    const matchingRequest = allRequests.find(r => 
-      (r.userId && r.userId === uid) ||
-      (r.email && r.email.toLowerCase() === email)
-    );
-
-    let membershipStatus = 'not_applied';
-    let membershipId = null;
-    let memberData = null;
-
-    if (matchingMember && matchingMember.status === 'approved') {
-      membershipStatus = 'approved';
-      membershipId = matchingMember.membershipId;
-      memberData = matchingMember;
-      if (!matchingMember.userId) {
-        await memberService.linkMemberToUser(matchingMember.id, { uid, email });
-      }
-    } else if (matchingRequest) {
-      membershipStatus = matchingRequest.status; // 'pending' or 'rejected'
-      memberData = matchingRequest;
+    if (record && record.status === 'approved' && !record.userId) {
+      await memberService.linkMemberToUser(record.id, { uid, email });
     }
 
-    let existingUser = allUsers.find(u => u.uid === uid || u.email === email);
+    const membershipStatus = deriveMembershipStatus(record);
+    const nowIso = new Date().toISOString();
+    const photo = existing?.profilePhoto || fbUser.photoURL || '';
 
-    const userData = {
+    const profile = {
       id: uid,
-      uid: uid,
-      name: fbUser.displayName || (existingUser ? existingUser.name : 'Club Member'),
-      fullName: fbUser.displayName || (existingUser ? existingUser.fullName : 'Club Member'),
-      email: fbUser.email,
-      mobile: existingUser?.mobile || matchingMember?.phone || matchingRequest?.phone || '',
-      phone: existingUser?.phone || matchingMember?.phone || matchingRequest?.phone || '',
-      dateOfBirth: existingUser?.dateOfBirth || matchingMember?.dateOfBirth || matchingRequest?.dateOfBirth || '',
-      gender: existingUser?.gender || matchingMember?.gender || matchingRequest?.gender || 'Male',
-      bloodGroup: existingUser?.bloodGroup || matchingMember?.bloodGroup || matchingRequest?.bloodGroup || '',
-      address: existingUser?.address || matchingMember?.address || matchingRequest?.address || '',
-      profilePhoto: fbUser.photoURL || existingUser?.profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-      photoURL: fbUser.photoURL || existingUser?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-      role: 'user',
+      uid,
+      name: existing?.name || fbUser.displayName || 'Club Member',
+      fullName: existing?.fullName || fbUser.displayName || 'Club Member',
+      email: fbUser.email || existing?.email || '',
+      profilePhoto: photo,
+      photoURL: existing?.photoURL || photo,
+      role: existing?.role === 'admin' ? 'admin' : 'user',
+      accountStatus: existing?.accountStatus || 'active',
       membershipStatus,
-      membershipId,
-      memberData,
-      updatedAt: new Date().toISOString()
+      membershipId: record?.membershipId || null,
+      updatedAt: nowIso,
+      ...(existing ? {} : { createdAt: nowIso, createdAtServer: serverTimestamp() }),
     };
 
-    if (existingUser) {
-      Object.assign(existingUser, userData);
-    } else {
-      userData.createdAt = new Date().toISOString();
-      allUsers.push(userData);
-    }
+    await store.set('users', uid, profile, { merge: true });
 
-    saveLocal(USERS_STORE_KEY, allUsers);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        await setDoc(doc(db, 'users', uid), {
-          ...userData,
-          updatedAtServer: serverTimestamp()
-        }, { merge: true });
-      } catch (err) {
-        console.warn('Firestore user sync fallback:', err.message);
-      }
-    }
-
-    return userData;
+    return { ...(existing || {}), ...profile, memberData: record };
   },
 
-  /**
-   * Administrator Login (Validates against admin accounts, no backdoor bypass)
-   */
-  loginAdmin: async (username, password) => {
-    if (!username || !password) {
-      throw new Error('Please enter both username and password.');
-    }
-
-    const cleanUsername = username.trim().toLowerCase();
-    const admins = loadLocal(ADMINS_STORE_KEY, DEFAULT_ADMINS);
-
-    const admin = admins.find(a => 
-      a.username.toLowerCase() === cleanUsername || 
-      a.email.toLowerCase() === cleanUsername
-    );
-
-    if (!admin || admin.passwordHash !== password) {
-      throw new Error('Invalid administrator credentials. Please check your username and password.');
-    }
-
-    const sessionUser = {
-      id: `admin_${admin.username}`,
-      uid: `admin_${admin.username}`,
-      name: admin.name || admin.fullName,
-      fullName: admin.fullName || admin.name,
-      username: admin.username,
-      email: admin.email,
-      role: 'admin',
-      membershipStatus: 'approved',
-      profilePhoto: admin.profilePhoto,
-      authenticatedAt: new Date().toISOString()
-    };
-
-    saveLocal(AUTH_USER_KEY, sessionUser);
-    return sessionUser;
-  },
-
-  /**
-   * Get currently authenticated session
-   */
-  getCurrentUser: () => {
-    return loadLocal(AUTH_USER_KEY, null);
-  },
-
-  /**
-   * Update profile details
-   */
   updateProfile: async (uid, profileData) => {
-    const allUsers = loadLocal(USERS_STORE_KEY, []);
-    const currentUser = loadLocal(AUTH_USER_KEY, null);
-
-    const userIndex = allUsers.findIndex(u => u.uid === uid || u.id === uid);
-    const updated = {
-      ...(currentUser || {}),
-      ...profileData,
-      updatedAt: new Date().toISOString()
-    };
-
-    if (userIndex >= 0) {
-      allUsers[userIndex] = { ...allUsers[userIndex], ...updated };
-      saveLocal(USERS_STORE_KEY, allUsers);
-    }
-
-    saveLocal(AUTH_USER_KEY, updated);
-
-    if (isFirebaseConfigured && db && uid) {
-      try {
-        await updateDoc(doc(db, 'users', uid), {
-          ...profileData,
-          updatedAt: new Date().toISOString()
-        });
-      } catch (err) {
-        console.warn('Firestore updateProfile fallback:', err.message);
-      }
-    }
-
+    const patch = { ...profileData, updatedAt: new Date().toISOString() };
+    delete patch.memberData;
+    await store.set('users', uid, patch, { merge: true });
+    const updated = { ...(authService.getCurrentUser() || {}), ...patch };
+    saveSession(updated);
     return updated;
   },
 
-  /**
-   * Get all registered users for Admin panel
-   */
-  getAllUsers: async () => {
-    const allUsers = loadLocal(USERS_STORE_KEY, []);
-    return allUsers;
-  },
+  /** Registered users for the admin panel */
+  getAllUsers: async () =>
+    (await store.list('users')).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))),
 
-  /**
-   * Sign out session
-   */
   logout: async () => {
-    if (isFirebaseConfigured && auth) {
+    if (useCloud && auth) {
       try {
         await firebaseSignOut(auth);
-      } catch (err) {
-        // ignore
-      }
+      } catch { /* already signed out */ }
     }
-    localStorage.removeItem(AUTH_USER_KEY);
+    saveSession(null);
     return true;
-  }
+  },
 };

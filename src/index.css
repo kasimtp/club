@@ -1,21 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Urbanist:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
+  --font-display: 'Urbanist', 'Plus Jakarta Sans', system-ui, sans-serif;
+
   --color-primary: #0A0A0B;
   --color-accent-amber: #F5B92B;
   --color-accent-sky: #1FA2F0;
   --color-accent-mint: #33D19B;
   --color-accent-coral: #FF5B4C;
   --color-accent-violet: #8B5CF6;
+
+  /* "Sense" soft-glass theme tokens */
+  --color-canvas: #ECEBEE;
+  --color-ink: #2A292E;
+  --color-ink-muted: #6E6C75;
+  --color-ink-subtle: #9A98A1;
+  --color-ember: #F2683A;
+  --color-ember-soft: #FFE6DA;
 }
 
 /* Base custom resets */
 html, body {
   font-family: var(--font-sans);
-  background-color: #F8F8F9;
+  background-color: var(--color-canvas);
   color: #121214;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -43,26 +52,27 @@ html, body {
   background: #A8A8B0;
 }
 
-/* Form controls */
+/* Form controls — in the components layer so utilities (pl-11, text-xs …) can override them */
+@layer components {
 .form-label {
   display: block;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #5C5C66;
+  letter-spacing: 0.12em;
+  color: var(--color-ink-subtle);
   margin-bottom: 6px;
 }
 
 .form-input {
   width: 100%;
   height: 48px;
-  padding: 0 16px;
-  background-color: #F2F2F4;
-  border: 1.5px solid transparent;
-  border-radius: 14px;
+  padding: 0 18px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid #FFFFFF;
+  border-radius: 9999px;
   font-size: 14px;
-  color: #121214;
+  color: var(--color-ink);
   font-weight: 500;
   transition: all 0.2s ease-in-out;
   outline: none;
@@ -70,22 +80,34 @@ html, body {
 
 .form-input:focus {
   background-color: #FFFFFF;
-  border-color: #121214;
-  box-shadow: 0 0 0 4px rgba(10, 10, 11, 0.06);
+  border-color: var(--color-ember);
+  box-shadow: 0 0 0 4px rgba(242, 104, 58, 0.14);
+}
+
+select.form-input {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E6C75' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+
+input[type='file'].form-input {
+  border-radius: 18px;
 }
 
 .form-input::placeholder {
-  color: #8A8A94;
+  color: var(--color-ink-subtle);
 }
 
 .form-textarea {
   width: 100%;
-  padding: 14px 16px;
-  background-color: #F2F2F4;
-  border: 1.5px solid transparent;
-  border-radius: 14px;
+  padding: 14px 18px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid #FFFFFF;
+  border-radius: 20px;
   font-size: 14px;
-  color: #121214;
+  color: var(--color-ink);
   font-weight: 500;
   transition: all 0.2s ease-in-out;
   outline: none;
@@ -94,8 +116,10 @@ html, body {
 
 .form-textarea:focus {
   background-color: #FFFFFF;
-  border-color: #121214;
-  box-shadow: 0 0 0 4px rgba(10, 10, 11, 0.06);
+  border-color: var(--color-ember);
+  box-shadow: 0 0 0 4px rgba(242, 104, 58, 0.14);
+}
+
 }
 
 /* Keyframe Animations */
@@ -124,6 +148,116 @@ html, body {
 
 .animate-scale-in {
   animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ------------------------------------------------------------------
+   "Sense" soft-glass theme
+   ------------------------------------------------------------------ */
+
+/* Page canvas: warm grey that washes into peach / pink / lavender */
+.sense-canvas {
+  background:
+    radial-gradient(60% 45% at 15% 105%, rgba(255, 190, 160, 0.55), transparent 70%),
+    radial-gradient(55% 45% at 55% 110%, rgba(240, 170, 205, 0.50), transparent 70%),
+    radial-gradient(50% 45% at 95% 100%, rgba(200, 175, 245, 0.55), transparent 70%),
+    linear-gradient(180deg, #EEEDEF 0%, #E9E8EB 60%, #E6E1EA 100%);
+}
+
+/* Frosted card surface with a white rim highlight */
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42));
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 24px 48px -28px rgba(70, 50, 90, 0.28),
+    0 2px 6px -2px rgba(70, 50, 90, 0.06);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1.5px solid #FFFFFF;
+  box-shadow:
+    0 14px 30px -18px rgba(70, 50, 90, 0.30),
+    0 1px 2px rgba(70, 50, 90, 0.06);
+}
+
+/* White frame around image cards (the "Meditate" / "Music" tiles) */
+.rim {
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 24px 48px -26px rgba(70, 50, 90, 0.35);
+}
+
+/* Image fades into a pale frosted bottom so a dark label can sit on it */
+.fade-light {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 35%, rgba(255, 246, 244, 0.72) 72%, rgba(255, 250, 250, 0.94) 100%);
+}
+
+/* Halftone dot texture, fading out toward the edges */
+.dot-grid {
+  background-image: radial-gradient(rgba(60, 50, 70, 0.13) 1px, transparent 1.2px);
+  background-size: 9px 9px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 70%);
+  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 70%);
+}
+
+/* Glossy coral orb brand mark */
+.orb {
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 32%),
+    radial-gradient(circle at 50% 55%, #FF9C7A 0%, #F2683A 45%, #D8455A 78%, #B13A6A 100%);
+  box-shadow:
+    0 12px 28px -6px rgba(242, 104, 58, 0.55),
+    inset -4px -6px 12px rgba(150, 30, 70, 0.35);
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-orb {
+  animation: orbFloat 6s ease-in-out infinite;
+}
+
+/* Pill tabs: raised white when active, outlined when idle */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.18);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.pill:hover {
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.pill-active,
+.pill-active:hover {
+  color: var(--color-ink);
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  box-shadow: 0 8px 18px -10px rgba(70, 50, 90, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb { animation: none; }
 }
 
 /* Print Styles for Digital Membership ID Card */

@@ -3,13 +3,16 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FiLock, FiUser, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import { useCloud } from '../services/store';
+import { TEST_ADMIN, testAdminEnabled } from '../services/authService';
 import Button from '../components/ui/Button';
 import clubLogo from '../assets/club-logo.webp';
 
 export default function AdminLogin() {
   const { loginAdmin, isAdmin } = useAuth();
-  const [username, setUsername] = useState('clubadmin');
-  const [password, setPassword] = useState('adm12345');
+  // Temporary: pre-filled with the test admin while testing (see services/authService.js)
+  const [username, setUsername] = useState(testAdminEnabled ? TEST_ADMIN.username : '');
+  const [password, setPassword] = useState(testAdminEnabled ? TEST_ADMIN.password : '');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,23 +42,29 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 animate-fade-in">
-      <div className="w-full max-w-md p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 shadow-xl space-y-6 text-center">
+      <div className="w-full max-w-md p-8 sm:p-10 rounded-[30px] glass shadow-[0_14px_30px_-16px_rgba(70,50,90,0.35)] space-y-6 text-center">
         
         {/* Shield Hero Icon / Brand Crest */}
         <div className="space-y-3">
-          <div className="w-20 h-20 rounded-3xl bg-white border border-slate-200 p-2 flex items-center justify-center mx-auto shadow-lg shadow-black/5">
+          <div className="w-20 h-20 rounded-[30px] glass p-2 flex items-center justify-center mx-auto shadow-[0_14px_30px_-16px_rgba(70,50,90,0.35)]">
             <img src={clubLogo} alt="Universal Club Crest" className="w-full h-full object-contain" />
           </div>
-          <span className="inline-block px-3 py-1 rounded-full bg-amber-400/20 text-amber-800 text-[10px] font-black uppercase tracking-wider">
+          <span className="inline-block px-3 py-1 rounded-full bg-ember-soft text-ember text-[10px] font-bold uppercase tracking-wider">
             Authorised Access Only
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink tracking-tight">
             Admin Console Login
           </h1>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
-            Universal Sports & Arts Club back-office portal and member management.
+          <p className="text-xs text-ink-muted max-w-xs mx-auto">
+            Universal Arts & Sports Club Vellur — back-office portal and member management.
           </p>
         </div>
+
+        {testAdminEnabled && (
+          <p className="px-4 py-2.5 rounded-2xl bg-ember-soft text-[11px] font-medium text-ember text-left">
+            Test login is on: clubadmin signs in as {TEST_ADMIN.email}. Turn it off before the site goes live.
+          </p>
+        )}
 
         {error && (
           <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-600 animate-slide-up">
@@ -65,14 +74,15 @@ export default function AdminLogin() {
 
         <form onSubmit={handleLogin} className="space-y-4 text-left">
           <div>
-            <label className="form-label">Username or Admin Email</label>
+            <label className="form-label">{useCloud && !testAdminEnabled ? 'Admin email' : 'Admin email or username'}</label>
             <div className="relative">
-              <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+              <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle text-base" />
               <input
-                type="text"
+                type={useCloud && !testAdminEnabled ? 'email' : 'text'}
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="clubadmin"
+                placeholder={useCloud ? 'you@example.com' : 'clubadmin'}
                 className="form-input pl-11"
                 required
               />
@@ -82,7 +92,7 @@ export default function AdminLogin() {
           <div>
             <label className="form-label">Password</label>
             <div className="relative">
-              <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+              <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-subtle text-base" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -94,7 +104,7 @@ export default function AdminLogin() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink p-1"
                 aria-label="Toggle password visibility"
               >
                 {showPassword ? <FiEyeOff /> : <FiEye />}
@@ -116,11 +126,11 @@ export default function AdminLogin() {
           </div>
         </form>
 
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-          <Link to="/" className="hover:text-slate-900 transition-colors">
+        <div className="pt-4 border-t border-black/5 flex items-center justify-between text-xs text-ink-subtle">
+          <Link to="/" className="hover:text-ink transition-colors">
             ← Back to Home
           </Link>
-          <Link to="/login" className="hover:text-slate-900 transition-colors">
+          <Link to="/login" className="hover:text-ink transition-colors">
             Member Login →
           </Link>
         </div>

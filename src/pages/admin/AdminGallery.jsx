@@ -6,6 +6,7 @@ import Chip from '../../components/ui/Chip';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { uploadMedia } from '../../services/uploadService';
+import { ikUrl } from '../../services/imagekitService';
 
 export default function AdminGallery() {
   const { gallery, addGalleryPhoto, removeGalleryPhoto } = useClubData();
@@ -16,12 +17,12 @@ export default function AdminGallery() {
   const [photoForm, setPhotoForm] = useState({
     title: '',
     description: '',
-    category: 'Facilities',
+    category: 'Events',
     imageUrl: ''
   });
 
-  const categories = ['All', 'Facilities', 'Sports', 'Events', 'Community', 'General'];
-  const uploadCats = ['Facilities', 'Sports', 'Events', 'Community', 'General'];
+  const categories = ['All', 'Sports', 'Events', 'Arts', 'Community', 'General'];
+  const uploadCats = ['Sports', 'Events', 'Arts', 'Community', 'General'];
 
   const filtered = gallery.filter(p => selectedCat === 'All' || p.category?.toLowerCase() === selectedCat.toLowerCase());
 
@@ -51,7 +52,7 @@ export default function AdminGallery() {
       setPhotoForm({
         title: '',
         description: '',
-        category: 'Facilities',
+        category: 'Events',
         imageUrl: ''
       });
     } finally {
@@ -65,8 +66,8 @@ export default function AdminGallery() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900">Photo Gallery Management</h1>
-          <p className="text-xs text-slate-400">Upload community photos, categorize assets, and delete expired media</p>
+          <h1 className="font-display text-xl font-bold text-ink">Photo Gallery Management</h1>
+          <p className="text-xs text-ink-subtle">Upload community photos, categorize assets, and delete expired media</p>
         </div>
 
         <Button
@@ -93,21 +94,32 @@ export default function AdminGallery() {
       </div>
 
       {/* Photos Grid */}
+      {filtered.length === 0 && (
+        <div className="glass rounded-[30px] p-10 text-center space-y-3">
+          <div className="orb w-12 h-12 mx-auto" aria-hidden="true" />
+          <h3 className="font-display text-lg font-semibold text-ink">No photos here yet</h3>
+          <p className="text-sm text-ink-muted max-w-sm mx-auto">Upload photos from matches, Onam and community drives to fill the public gallery.</p>
+          <Button variant="primary" size="sm" icon={FiPlus} onClick={() => setIsAddOpen(true)}>
+            Add photo
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {filtered.map((photo) => (
           <div
             key={photo.id}
-            className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-xs"
+            className="rim group relative aspect-square rounded-[26px] overflow-hidden bg-white"
           >
             <img
-              src={photo.imageUrl}
+              src={ikUrl(photo.imageUrl, { width: 500 })}
               alt={photo.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
 
             {/* Category Pill Top Left */}
             <div className="absolute top-2 left-2">
-              <span className="px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-white text-[9px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-white/90 text-ink text-[9px] font-bold">
                 {photo.category}
               </span>
             </div>
@@ -120,7 +132,7 @@ export default function AdminGallery() {
                   removeGalleryPhoto(photo.id);
                 }
               }}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-md"
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center transition-all shadow-[0_14px_30px_-16px_rgba(70,50,90,0.35)]"
               title="Delete Photo"
             >
               <FiTrash2 className="text-xs" />
@@ -174,7 +186,7 @@ export default function AdminGallery() {
               type="file"
               accept="image/*"
               onChange={handleFileUpload}
-              className="form-input pt-2.5 text-xs text-slate-600"
+              className="form-input pt-2.5 text-xs text-ink-muted"
             />
           </div>
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiAward, FiCheckCircle, FiClock, 
-  FiUser 
+  FiUser, FiUpload, FiLoader
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useClubData } from '../context/ClubDataContext';
@@ -29,6 +29,8 @@ export default function Membership() {
   // Application Modal state
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -48,13 +50,23 @@ export default function Membership() {
   // Handle Photo Picker
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const url = await uploadMedia(file, 'members', 'image');
+    if (!file) return;
+
+    setPhotoError('');
+    setIsUploadingPhoto(true);
+
+    try {
+      const url = await uploadMedia(file, 'members', 'image');
+      if (url) {
         setFormData(prev => ({ ...prev, photoURL: url }));
-      } catch (err) {
-        alert(err.message);
       }
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      setPhotoError(err.message || 'Could not process selected photo. Please try a different image.');
+    } finally {
+      setIsUploadingPhoto(false);
+      // Reset input value so selecting the same file again triggers onChange
+      e.target.value = '';
     }
   };
 
@@ -368,25 +380,54 @@ export default function Membership() {
         <form onSubmit={handleApplySubmit} className="space-y-4">
           
           {/* Member Photo Upload */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl bg-slate-200 overflow-hidden border border-slate-300 shrink-0 flex items-center justify-center">
-              {formData.photoURL ? (
-                <img src={formData.photoURL} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <FiUser className="text-3xl text-slate-400" />
-              )}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="flex items-center gap-4">
+              <div className="relative w-20 h-20 rounded-2xl bg-slate-200 overflow-hidden border border-slate-300 shrink-0 flex items-center justify-center">
+                {isUploadingPhoto ? (
+                  <div className="flex flex-col items-center justify-center gap-1 text-slate-600">
+                    <FiLoader className="text-2xl animate-spin text-amber-600" />
+                    <span className="text-[9px] font-bold">Processing...</span>
+                  </div>
+                ) : formData.photoURL ? (
+                  <img src={formData.photoURL} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <FiUser className="text-3xl text-slate-400" />
+                )}
+              </div>
+
+              <div className="flex-1 space-y-1.5">
+                <label className="form-label mb-0">ID Photo (Passport / Clear Face) *</label>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:border-amber-500 hover:text-amber-600 text-xs font-semibold text-slate-700 shadow-xs transition-colors">
+                    <FiUpload className="text-xs" />
+                    <span>{formData.photoURL ? 'Change Photo' : 'Choose Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.jfif,.heic"
+                      onChange={handlePhotoUpload}
+                      disabled={isUploadingPhoto}
+                      className="hidden"
+                    />
+                  </label>
+                  {formData.photoURL && !isUploadingPhoto && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, photoURL: '' }))}
+                      className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-tight">Will be printed on your digital membership card.</p>
+              </div>
             </div>
 
-            <div className="flex-1 space-y-1">
-              <label className="form-label mb-1">ID Photo (Passport / Clear Face) *</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="text-xs text-slate-600"
-              />
-              <p className="text-[10px] text-slate-400">Will be printed on your digital membership card.</p>
-            </div>
+            {photoError && (
+              <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1.5 rounded-xl border border-red-200">
+                {photoError}
+              </p>
+            )}
           </div>
 
           {/* Full Name */}

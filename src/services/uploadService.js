@@ -12,9 +12,10 @@ export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'im
 export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 export const MAX_IMAGE_SIZE_MB = 10;
 export const MAX_VIDEO_SIZE_MB = 40;
-// Without an upload server, files are stored inline as data URLs in the record itself.
-// Firestore documents cap at 1MB, so anything bigger cannot be saved that way.
 export const MAX_INLINE_SIZE_MB = 0.7;
+
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|bmp|svg|jfif|heic|heif|avif)$/i;
+const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|ogg)$/i;
 
 /**
  * Validates a file's MIME type and size limit
@@ -24,8 +25,13 @@ export function validateMediaFile(file, expectedType = 'image') {
     throw new Error('No file provided for upload.');
   }
 
-  const isImage = file.type.startsWith('image/');
-  const isVideo = file.type.startsWith('video/');
+  const hasImageMime = file.type && file.type.startsWith('image/');
+  const hasVideoMime = file.type && file.type.startsWith('video/');
+  const hasImageExt = IMAGE_EXTENSIONS.test(file.name || '');
+  const hasVideoExt = VIDEO_EXTENSIONS.test(file.name || '');
+
+  const isImage = hasImageMime || hasImageExt;
+  const isVideo = hasVideoMime || hasVideoExt;
 
   if (expectedType === 'image' && !isImage) {
     throw new Error('Please select a valid image file (JPEG, PNG, WebP).');
@@ -43,42 +49,92 @@ export function validateMediaFile(file, expectedType = 'image') {
   return true;
 }
 
-const MAX_IMAGE_EDGE = 2400;        // px — plenty for full-screen display, far smaller than phone originals
-const COMPRESS_ABOVE_BYTES = 600 * 1024;
+const MAX_IMAGE_EDGE = 1600;       // px — plenty for hero / gallery displays
+const MAX_AVATAR_EDGE = 600;        // px — crisp ID / passport photo, tiny file size
+const COMPRESS_ABOVE_BYTES = 100 * 1024;
 
 /**
- * Shrinks large photos in the browser before upload (longest edge ≤ 2400px, WebP ~85%).
- * Faster uploads on mobile data and smaller stored originals. Small images, GIFs (animation)
- * and SVGs are left untouched, and the original is kept if compression doesn't help.
+ * Shrinks large photos in the browser before upload.
+ * Member avatars are clamped to max 600px (~25-50 KB), preserving memory and storage quotas.
  */
-export async function compressImage(file) {
-  if (!file.type.startsWith('image/') || /gif|svg/.test(file.type)) return file;
-  if (typeof createImageBitmap !== 'function') return file;
+export async function compressImage(file, maxEdge = MAX_IMAGE_EDGE) {
+  const type = (file.type || '').toLowerCase();
+  const name = file.name || 'photo.jpg';
+  if (/gif|svg/.test(type) || /\.(gif|svg)$/i.test(name)) return file;
 
-  let bitmap;
+  // 1. Modern fast path: createImageBitmap + canvas
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null);
+      if (bitmap && bitmap.width > 0 && bitmap.height > 0) {
+        const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+        if (scale < 1 || file.size > COMPRESS_ABOVE_BYTES) {
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          bitmap.close?.();
+
+          const blob = await new Promise((resolve) => {
+            let done = false;
+            const finish = (b) => { if (!done) { done = true; resolve(b); } };
+            try {
+              canvas.toBlob(finish, 'image/webp', 0.85);
+            } catch {
+              finish(null);
+            }
+            setTimeout(() => finish(null), 2500);
+          });
+
+          if (blob && blob.size > 0 && blob.size < file.size) {
+            const outName = name.replace(/\.[^.]+$/, '') + '.webp';
+            return new File([blob], outName, { type: 'image/webp', lastModified: Date.now() });
+          }
+        } else {
+          bitmap.close?.();
+          return file;
+        }
+      }
+    } catch {
+      // Fall through to FileReader fallback
+    }
+  }
+
+  // 2. Rock-solid fallback: FileReader + HTMLImageElement + canvas.toDataURL
   try {
-    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  } catch {
-    return file; // format the browser can't decode (e.g. some HEIC) — upload as-is
-  }
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read image.'));
+      reader.readAsDataURL(file);
+    });
 
-  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
-  if (scale === 1 && file.size <= COMPRESS_ABOVE_BYTES) {
-    bitmap.close?.();
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Failed to load image.'));
+      image.src = dataUrl;
+    });
+
+    const scale = Math.min(1, maxEdge / Math.max(img.width || 1, img.height || 1));
+    if (scale < 1 || file.size > COMPRESS_ABOVE_BYTES) {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const outDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+      const res = await fetch(outDataUrl);
+      const blob = await res.blob();
+      const outName = name.replace(/\.[^.]+$/, '') + '.jpg';
+      return new File([blob], outName, { type: 'image/jpeg', lastModified: Date.now() });
+    }
     return file;
+  } catch {
+    return file; // If compression fails, return the original file
   }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close?.();
-
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
-  if (!blob || blob.size >= file.size) return file;
-
-  const name = file.name.replace(/\.[^.]+$/, '') + '.webp';
-  return new File([blob], name, { type: 'image/webp', lastModified: Date.now() });
 }
 
 /**
@@ -88,54 +144,66 @@ export function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = (e) => reject(new Error('Failed to read file.'));
+    reader.onerror = () => reject(new Error('Failed to read file.'));
     reader.readAsDataURL(file);
   });
 }
 
 /**
  * Securely uploads an image or video asset
- * If an external backend endpoint is available, uploads via multipart POST.
+ * If an external backend endpoint or ImageKit is available, uploads via cloud API.
  * Otherwise returns an optimized base64 asset.
  */
 export async function uploadMedia(file, folder = 'general', expectedType = 'image', { onProgress } = {}) {
-  // Photos are compressed first, so a large phone photo isn't rejected by the size limit
-  if (expectedType === 'image' && file?.type?.startsWith('image/')) file = await compressImage(file);
   validateMediaFile(file, expectedType);
 
-  // ImageKit media storage (shared with the mobile app)
-  if (isImageKitConfigured) {
-    const uploaded = await uploadToImageKit(file, folder, { onProgress });
-    return uploaded.url;
+  // Photos are compressed first with appropriate bounds per target
+  if (expectedType === 'image') {
+    const isAvatar = folder === 'members' || folder === 'users' || folder === 'profile';
+    file = await compressImage(file, isAvatar ? MAX_AVATAR_EDGE : MAX_IMAGE_EDGE);
   }
 
-  // If a secure backend upload endpoint is provided in env
+  // 1. ImageKit media storage (shared with the mobile app)
+  if (isImageKitConfigured) {
+    try {
+      const uploaded = await uploadToImageKit(file, folder, { onProgress });
+      return uploaded.url;
+    } catch (err) {
+      console.warn('ImageKit cloud upload failed, falling back to local storage:', err.message);
+    }
+  }
+
+  // 2. Custom backend upload endpoint if provided in env
   const uploadApiUrl = import.meta.env.VITE_UPLOAD_API_URL;
   if (uploadApiUrl) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folder', folder);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', folder);
 
-    const response = await fetch(uploadApiUrl, {
-      method: 'POST',
-      body: formData,
-    });
+      const response = await fetch(uploadApiUrl, {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error(`Upload server error: ${response.statusText}`);
+      if (response.ok) {
+        const data = await response.json();
+        const url = data.url || data.mediaUrl || data.secure_url;
+        if (url) return url;
+      }
+    } catch (err) {
+      console.warn('Custom upload API failed, falling back to local storage:', err.message);
     }
-
-    const data = await response.json();
-    return data.url || data.mediaUrl || data.secure_url;
   }
 
-  // Fallback: Read as base64 / Data URL
+  // 3. Fallback: Compact Data URL
   if (expectedType === 'video' && file.size > MAX_INLINE_SIZE_MB * 1024 * 1024) {
     throw new Error(
       `This video is ${(file.size / 1024 / 1024).toFixed(1)}MB. Without ImageKit configured ` +
       `only videos under ${MAX_INLINE_SIZE_MB * 1000}KB can be saved. Host it elsewhere and paste the URL instead.`
     );
   }
+
   return await readFileAsDataUrl(file);
 }
 

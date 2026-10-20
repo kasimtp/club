@@ -149,6 +149,27 @@ export const authService = {
       return session;
     }
 
+    // Local development fallback (!useCloud)
+    if (
+      (usingTestAdmin || email.trim().toLowerCase() === TEST_ADMIN.email.toLowerCase()) &&
+      password === TEST_ADMIN.password
+    ) {
+      const session = {
+        id: 'local_admin',
+        uid: 'local_admin',
+        name: 'Club Administrator',
+        fullName: 'Club Administrator',
+        email: TEST_ADMIN.email,
+        username: TEST_ADMIN.username,
+        role: 'admin',
+        membershipStatus: 'approved',
+        profilePhoto: '',
+        authenticatedAt: new Date().toISOString(),
+      };
+      saveSession(session);
+      return session;
+    }
+
     throw new Error('Invalid administrator credentials.');
   },
 

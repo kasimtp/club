@@ -49,9 +49,11 @@ export default function MemberProfile() {
     if (file) {
       try {
         const url = await uploadMedia(file, 'members', 'image');
-        setEditForm(prev => ({ ...prev, profilePhoto: url }));
+        if (url) setEditForm(prev => ({ ...prev, profilePhoto: url }));
       } catch (err) {
-        alert(err.message);
+        alert(err.message || 'Failed to process photo.');
+      } finally {
+        e.target.value = '';
       }
     }
   };

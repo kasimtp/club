@@ -74,9 +74,11 @@ export default function AdminMembers() {
     if (file) {
       try {
         const url = await uploadMedia(file, 'members', 'image');
-        setAddForm(prev => ({ ...prev, photoURL: url }));
+        if (url) setAddForm(prev => ({ ...prev, photoURL: url }));
       } catch (err) {
-        alert(err.message);
+        alert(err.message || 'Failed to process photo.');
+      } finally {
+        e.target.value = '';
       }
     }
   };

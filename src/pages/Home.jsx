@@ -15,6 +15,7 @@ import Button from '../components/ui/Button';
 import Chip from '../components/ui/Chip';
 import Modal from '../components/ui/Modal';
 import MediaPlaceholder from '../components/ui/MediaPlaceholder';
+import Avatar from '../components/ui/Avatar';
 import clubLogo from '../assets/club-logo.webp';
 
 // Activity tiles: abstract pastel gradients (like the reference's Music / Move / Sleep cards)
@@ -63,10 +64,11 @@ function SeeAll({ to, children }) {
 }
 
 export default function Home() {
-  const { clubInfo, slides, programs, events, news, services, toggleFavourite, isFavourite } = useClubData();
+  const { clubInfo, slides, programs, events, news, services, team, toggleFavourite, isFavourite } = useClubData();
   const { isMember } = useAuth();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
   const [eventFilter, setEventFilter] = useState('All');
   const navigate = useNavigate();
 
@@ -417,6 +419,135 @@ export default function Home() {
         </section>
       )}
 
+      {/* 7. Executive Committee Section — Bento Spotlight */}
+      {team && team.length > 0 && (
+        <section className="space-y-6">
+          <SectionHeading
+            eyebrow="Club leadership"
+            title="Executive"
+            strong="committee"
+            action={<SeeAll to="/team">All committee members ({team.length})</SeeAll>}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* President Hero Spotlight Card */}
+            {team[0] && (
+              <div
+                onClick={() => setSelectedMember(team[0])}
+                className="glass group relative lg:col-span-5 rounded-[34px] p-7 sm:p-9 flex flex-col justify-between overflow-hidden cursor-pointer hover:-translate-y-1 transition-all duration-300 border-2 border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white/80 to-white shadow-[0_20px_45px_-18px_rgba(245,158,11,0.35)]"
+              >
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-radial from-amber-400/20 to-transparent blur-2xl pointer-events-none" />
+
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-950 font-black text-xs uppercase tracking-wider border border-amber-300 shadow-xs">
+                    <FiAward className="text-amber-600" /> Club President
+                  </span>
+                  <span className="w-8 h-8 rounded-full bg-white text-ink flex items-center justify-center shadow-xs group-hover:bg-ember group-hover:text-white transition-colors">
+                    <FiArrowUpRight />
+                  </span>
+                </div>
+
+                <div className="my-3 flex flex-col sm:flex-row items-center sm:items-end gap-5">
+                  <div className="w-28 h-28 rounded-2xl overflow-hidden ring-4 ring-amber-400/35 border-4 border-white shadow-xl bg-slate-100 shrink-0 group-hover:scale-105 transition-transform duration-500">
+                    <img src={team[0].image} alt={team[0].name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="space-y-1 text-center sm:text-left">
+                    <h3 className="font-display text-2xl font-black text-ink leading-tight">
+                      {team[0].name}
+                    </h3>
+                    <p className="text-xs font-semibold text-amber-700">Executive Committee Head</p>
+                    <p className="text-xs text-ink-muted line-clamp-3 leading-relaxed pt-1">
+                      {team[0].bio}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-amber-200/60 flex items-center justify-between text-xs font-bold text-amber-900">
+                  <span>View President's profile</span>
+                  <span className="text-amber-600 group-hover:translate-x-1 transition-transform">→</span>
+                </div>
+              </div>
+            )}
+
+            {/* General Secretary & Treasurer Side Bento Cards */}
+            <div className="lg:col-span-7 flex flex-col gap-4 justify-between">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                {team.slice(1, 3).map((member) => (
+                  <div
+                    key={member.id}
+                    onClick={() => setSelectedMember(member)}
+                    className="glass group rounded-[30px] p-6 flex flex-col justify-between cursor-pointer hover:-translate-y-1 transition-all duration-300"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`px-3 py-0.5 rounded-full text-xs font-bold border ${
+                          member.position === 'General Secretary'
+                            ? 'bg-blue-100 text-blue-900 border-blue-200'
+                            : 'bg-emerald-100 text-emerald-900 border-emerald-200'
+                        }`}>
+                          {member.position}
+                        </span>
+                        <span className="w-7 h-7 rounded-full bg-white text-ink-muted group-hover:text-ember flex items-center justify-center shadow-xs">
+                          <FiArrowUpRight />
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-4 my-2">
+                        <div className="w-18 h-18 rounded-2xl overflow-hidden border-3 border-white shadow-md shrink-0 group-hover:scale-105 transition-transform">
+                          <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-display text-lg font-bold text-ink leading-tight">{member.name}</h4>
+                          <span className="text-[10px] uppercase font-bold text-ink-subtle">Office Bearer</span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-ink-muted line-clamp-2 leading-relaxed mt-2">
+                        {member.bio}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 border-t border-black/5 text-right">
+                      <span className="text-[11px] font-semibold text-ink-subtle group-hover:text-ember transition-colors">
+                        View profile →
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom Quick Row: Vice Presidents & Joint Secretaries Thumbnails */}
+              <div className="glass rounded-[28px] p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-3 overflow-hidden">
+                    {team.slice(3, 9).map((m) => (
+                      <img
+                        key={m.id}
+                        src={m.image}
+                        alt={m.name}
+                        title={`${m.name} (${m.position})`}
+                        className="inline-block w-10 h-10 rounded-full ring-2 ring-white object-cover shadow-xs"
+                      />
+                    ))}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-ink">Vice Presidents &amp; Joint Secretaries</p>
+                    <p className="text-[11px] text-ink-muted">6 additional executive leaders</p>
+                  </div>
+                </div>
+
+                <Link
+                  to="/team"
+                  className="pill !h-9 text-xs font-bold shrink-0 hover:bg-ember hover:text-white"
+                >
+                  Meet all 9 members <FiArrowUpRight />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Event Details Modal Dialog */}
       <Modal
         isOpen={Boolean(selectedEvent)}
@@ -550,6 +681,72 @@ export default function Home() {
               >
                 Register Interest
               </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Office Bearer Profile Modal */}
+      <Modal
+        isOpen={Boolean(selectedMember)}
+        onClose={() => setSelectedMember(null)}
+        title="Office Bearer Profile"
+        maxWidth="max-w-md"
+      >
+        {selectedMember && (
+          <div className="space-y-5 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b border-black/5">
+              <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white shadow-lg bg-slate-100 shrink-0">
+                <img
+                  src={selectedMember.image}
+                  alt={selectedMember.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="space-y-1 text-center sm:text-left">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">
+                  {selectedMember.category}
+                </span>
+                <h3 className="font-display text-2xl font-bold text-ink leading-tight">
+                  {selectedMember.name}
+                </h3>
+                <span className="inline-block px-3 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                  {selectedMember.position}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-ink-subtle">
+                Role &amp; Responsibilities
+              </h4>
+              <p className="text-xs sm:text-sm text-ink leading-relaxed bg-white/70 p-4 rounded-2xl border border-white">
+                {selectedMember.bio}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-white/70 border border-white text-left">
+                <p className="text-ink-subtle text-[11px] font-semibold">Active Term</p>
+                <p className="font-bold text-ink mt-0.5">2026 – Present</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-white/70 border border-white text-left">
+                <p className="text-ink-subtle text-[11px] font-semibold">Club Unit</p>
+                <p className="font-bold text-ink mt-0.5">Vellur, Kerala</p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-black/5 flex items-center justify-end gap-3">
+              <Button variant="outline" size="md" onClick={() => setSelectedMember(null)}>
+                Close
+              </Button>
+              <Link
+                to="/team"
+                onClick={() => setSelectedMember(null)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ember text-white text-xs font-bold shadow-md hover:bg-ember/90 transition-all"
+              >
+                Full Committee <FiArrowUpRight />
+              </Link>
             </div>
           </div>
         )}

@@ -67,8 +67,104 @@ export const defaultEvents = [
 // Gallery photos are uploaded from Admin → Gallery.
 export const defaultGallery = [];
 
-// Committee members are not listed on the club's public pages yet.
-export const defaultTeam = [];
+// Executive Committee & Office Bearers
+export const defaultTeam = [
+  // ── Core Executive Officers ──
+  {
+    id: 'majeed-ck',
+    name: 'Majeed C.K',
+    position: 'President',
+    role: 'president',
+    category: 'Core Executive',
+    image: '/majeed.ck.jpeg',
+    bio: 'President leading Universal Arts & Sports Club initiatives, community welfare, and strategic vision.',
+    order: 1,
+  },
+  {
+    id: 'rafi-aliyar',
+    name: 'Rafi Aliyar',
+    position: 'General Secretary',
+    role: 'secretary',
+    category: 'Core Executive',
+    image: '/rafi%20aliyar.jpeg',
+    bio: 'General Secretary coordinating club administration, sports tournaments, and public affairs.',
+    order: 2,
+  },
+  {
+    id: 'arshad-k',
+    name: 'Arshad K',
+    position: 'Treasurer',
+    role: 'treasurer',
+    category: 'Core Executive',
+    image: '/harshad.k.jpeg',
+    bio: 'Treasurer managing club accounts, financial planning, event budgeting, and member funds.',
+    order: 3,
+  },
+
+  // ── Vice Presidents ──
+  {
+    id: 'ali-maliyekkal',
+    name: 'Ali Maliyekkal',
+    position: 'Vice President',
+    role: 'vice_president',
+    category: 'Vice Presidents',
+    image: '/ali.jpeg',
+    bio: 'Vice President guiding strategic development, youth mentorship, and community outreach.',
+    order: 4,
+  },
+  {
+    id: 'subair-cp',
+    name: 'Subair C.P',
+    position: 'Vice President',
+    role: 'vice_president',
+    category: 'Vice Presidents',
+    image: '/subair.jpeg',
+    bio: 'Vice President overseeing cultural programs, village festivals, and event celebrations.',
+    order: 5,
+  },
+  {
+    id: 'nasumudheen-kt',
+    name: 'Nasumudheen K.T',
+    position: 'Vice President',
+    role: 'vice_president',
+    category: 'Vice Presidents',
+    image: '/nashumudheen.jpeg',
+    bio: 'Vice President directing football coaching, athletic training, and sports facilities.',
+    order: 6,
+  },
+
+  // ── Joint Secretaries ──
+  {
+    id: 'shahid-n',
+    name: 'Shahid N',
+    position: 'Joint Secretary',
+    role: 'joint_secretary',
+    category: 'Joint Secretaries',
+    image: '/shahid.n.jpeg',
+    bio: 'Joint Secretary managing match operations, tournament logistics, and player enrollments.',
+    order: 7,
+  },
+  {
+    id: 'habeeb-pp',
+    name: 'Habeeb P.P',
+    position: 'Joint Secretary',
+    role: 'joint_secretary',
+    category: 'Joint Secretaries',
+    image: '/habeeb.jpeg',
+    bio: 'Joint Secretary coordinating ground arrangements, event equipment, and team support.',
+    order: 8,
+  },
+  {
+    id: 'noor-samad-k',
+    name: 'Noor Samad K',
+    position: 'Joint Secretary',
+    role: 'joint_secretary',
+    category: 'Joint Secretaries',
+    image: '/nooru%20samad.jpeg',
+    bio: 'Joint Secretary supporting social drives, member communications, and community welfare.',
+    order: 9,
+  },
+];
 
 export const defaultNews = [
   {

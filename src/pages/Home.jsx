@@ -3,9 +3,10 @@ import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FiArrowUpRight, FiCalendar, FiMapPin, FiClock, FiPlay,
-  FiCreditCard, FiStar, FiHeart, FiUsers, FiInstagram, FiSend
+  FiCreditCard, FiStar, FiHeart, FiUsers, FiInstagram, FiSend,
+  FiAward
 } from 'react-icons/fi';
-import { MdSportsSoccer, MdSportsCricket, MdPalette, MdVolunteerActivism } from 'react-icons/md';
+import { MdSportsCricket, MdPalette, MdVolunteerActivism } from 'react-icons/md';
 import { useClubData } from '../context/ClubDataContext';
 import { useAuth } from '../context/AuthContext';
 import HomeSlider from '../components/HomeSlider';
@@ -15,12 +16,11 @@ import Button from '../components/ui/Button';
 import Chip from '../components/ui/Chip';
 import Modal from '../components/ui/Modal';
 import MediaPlaceholder from '../components/ui/MediaPlaceholder';
-import Avatar from '../components/ui/Avatar';
 import clubLogo from '../assets/club-logo.webp';
 
 // Activity tiles: abstract pastel gradients (like the reference's Music / Move / Sleep cards)
 const ACTIVITY_TILES = {
-  football: { icon: MdSportsSoccer, gradient: 'linear-gradient(140deg, #FFB08A 0%, #F7C9A8 35%, #C9E7C4 70%, #9FD7A8 100%)' },
+  football: { image: '/football.png', gradient: 'linear-gradient(140deg, #FFB08A 0%, #F7C9A8 35%, #C9E7C4 70%, #9FD7A8 100%)' },
   cricket: { icon: MdSportsCricket, gradient: 'linear-gradient(150deg, #B7C8F5 0%, #D9C6F2 45%, #F6B7C6 100%)' },
   arts: { icon: MdPalette, gradient: 'linear-gradient(140deg, #FFD08A 0%, #FFB0A0 45%, #F49AC1 100%)' },
   community: { icon: MdVolunteerActivism, gradient: 'linear-gradient(150deg, #A9E2D0 0%, #C9E3F2 50%, #D8C4F4 100%)' },
@@ -205,8 +205,18 @@ export default function Home() {
                   <div className="relative h-56 sm:h-72 overflow-hidden rounded-[26px]" style={{ background: tile.gradient }}>
                     {/* soft blurred blobs give the painterly feel of the reference tiles */}
                     <div className="absolute -top-10 -left-6 w-48 h-48 rounded-full bg-white/40 blur-3xl" aria-hidden="true" />
-                    <div className="absolute bottom-6 right-0 w-40 h-40 rounded-full bg-white/30 blur-2xl group-hover:scale-125 transition-transform duration-700" aria-hidden="true" />
-                    <Icon className="absolute top-5 right-5 text-5xl sm:text-6xl text-white/80 drop-shadow-sm" aria-hidden="true" />
+                    <div className="absolute inset-0 pb-16 flex items-center justify-center pointer-events-none select-none">
+                      {tile.image ? (
+                        <img
+                          src={tile.image}
+                          alt=""
+                          className="w-28 h-28 sm:w-40 sm:h-40 object-contain brightness-0 invert opacity-85 drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        Icon && <Icon className="text-6xl sm:text-7xl text-white/80 drop-shadow-sm group-hover:scale-110 transition-transform duration-500" aria-hidden="true" />
+                      )}
+                    </div>
                     <div className="absolute inset-0 fade-light" />
                     <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex items-end justify-between gap-3">
                       <div className="min-w-0">

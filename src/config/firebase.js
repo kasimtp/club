@@ -12,7 +12,8 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "universal-club-app",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "universal-club-app.appspot.com",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:abcdef123456"
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:abcdef123456",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 export const isFirebaseConfigured = Boolean(

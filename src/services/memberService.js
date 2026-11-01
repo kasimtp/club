@@ -90,17 +90,21 @@ export const memberService = {
   },
 
   submitApplication: async (formData, currentUser = null) => {
-    const all = await store.list(MEMBERS);
+    if (currentUser?.uid) {
+      try {
+        const myApps = await store.findBy(MEMBERS, 'userId', currentUser.uid, 2);
+        if (myApps.some((m) => m.status === 'pending')) {
+          throw new Error('An application is already pending review with this account.');
+        }
+        if (myApps.some((m) => m.status === 'approved')) {
+          throw new Error('An active membership record already exists for this account.');
+        }
+      } catch (err) {
+        if (err.message?.includes('already')) throw err;
+      }
+    }
     const email = norm(formData.email);
     const phone = digits(formData.phone || formData.mobile);
-    const matches = (m) => (email && norm(m.email) === email) || (phone && digits(m.phone || m.mobile) === phone);
-
-    if (all.some((m) => m.status === 'pending' && matches(m))) {
-      throw new Error('An application is already pending review with this email or phone number.');
-    }
-    if (all.some((m) => m.status === 'approved' && matches(m))) {
-      throw new Error('An active membership record already exists for this member.');
-    }
 
     const id = currentUser?.uid ? `mem_${currentUser.uid}` : `mem_${phone || 'manual'}_${Date.now()}`;
     const nowIso = new Date().toISOString();
@@ -203,6 +207,7 @@ export const memberService = {
     const joiningDate = formData.joiningDate ? new Date(formData.joiningDate).toISOString() : new Date().toISOString();
     const nowIso = new Date().toISOString();
     const phone = digits(formData.phone || formData.mobile);
+
     const id = `mem_${phone || 'manual'}_${Date.now()}`;
     const name = formData.name || formData.fullName;
     const photo = formData.photoURL || formData.profilePhoto || DEFAULT_PHOTO;
@@ -256,3 +261,4 @@ export const memberService = {
     return { ...member, userId: null, linkedAt: null };
   },
 };
+

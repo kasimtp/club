@@ -1,10 +1,10 @@
 // Membership Hub Page
-// Dynamic 3-State Screen: Digital ID Card / Pending Review Status / Application Plan & Form
+// Dynamic 4-State Screen: Digital ID Card / Pending Review / Application Rejected / Plan & Form
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  FiAward, FiCheckCircle, FiClock, 
-  FiUser, FiUpload, FiLoader
+  FiAward, FiCheckCircle, FiClock, FiXCircle,
+  FiUser, FiUpload, FiLoader, FiLock
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useClubData } from '../context/ClubDataContext';
@@ -17,9 +17,8 @@ import clubLogo from '../assets/club-logo.webp';
 import { memberService } from '../services/memberService';
 
 export default function Membership() {
-  const { user, isMember, isPending, memberData, refreshUser } = useAuth();
+  const { user, isMember, isPending, isRejected, memberData, refreshUser, loginWithGoogle } = useAuth();
   const { applyForMembership } = useClubData();
-  const navigate = useNavigate();
 
   // Search by ID state for public lookup
   const [lookupQuery, setLookupQuery] = useState('');
@@ -34,15 +33,30 @@ export default function Membership() {
 
   // Form State
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.mobile || '',
-    dateOfBirth: user?.dateOfBirth || '',
-    gender: user?.gender || 'Male',
-    bloodGroup: user?.bloodGroup || 'O+',
-    address: user?.address || '',
-    photoURL: user?.profilePhoto || '',
+    name: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: 'Male',
+    bloodGroup: 'O+',
+    address: '',
+    photoURL: '',
   });
+
+  const handleOpenApplyModal = () => {
+    setFormData({
+      name: user?.name || user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.mobile || '',
+      dateOfBirth: user?.dateOfBirth || '',
+      gender: user?.gender || 'Male',
+      bloodGroup: user?.bloodGroup || 'O+',
+      address: user?.address || '',
+      photoURL: user?.profilePhoto || user?.photoURL || '',
+    });
+    setPhotoError('');
+    setIsApplyModalOpen(true);
+  };
 
   const genderOptions = ['Male', 'Female', 'Other'];
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -65,14 +79,17 @@ export default function Membership() {
       setPhotoError(err.message || 'Could not process selected photo. Please try a different image.');
     } finally {
       setIsUploadingPhoto(false);
-      // Reset input value so selecting the same file again triggers onChange
       e.target.value = '';
     }
   };
 
   const handleApplySubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
+    if (!user) {
+      alert('You must sign in with Google before submitting a membership application.');
+      return;
+    }
+    if (!formData.name.trim() || !formData.phone.trim()) {
       alert('Please fill in all required contact information.');
       return;
     }
@@ -83,11 +100,16 @@ export default function Membership() {
 
     setSubmitting(true);
     try {
-      await applyForMembership(formData, user);
+      // Force email to match authenticated Google user
+      const submissionData = {
+        ...formData,
+        email: user.email,
+      };
+      await applyForMembership(submissionData, user);
       await refreshUser();
       setIsApplyModalOpen(false);
     } catch (_err) {
-      // toast shown in context
+      // Toast message shown via context
     } finally {
       setSubmitting(false);
     }
@@ -218,7 +240,7 @@ export default function Membership() {
           </div>
 
           <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-            Once approved, your Digital ID Pass will immediately appear here.
+            Once approved by the committee, your official Digital ID Pass will appear right here.
           </p>
         </div>
 
@@ -235,7 +257,42 @@ export default function Membership() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // STATE 3: GUEST / NOT APPLIED -> HERO PLAN & APPLICATION FORM
+  // STATE 2B: REJECTED APPLICANT STATUS
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (isRejected) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6 text-center animate-fade-in">
+        <div className="w-16 h-16 rounded-3xl bg-red-50 text-red-500 border border-red-200 flex items-center justify-center text-3xl mx-auto shadow-md">
+          <FiXCircle />
+        </div>
+
+        <div className="space-y-2">
+          <span className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-900 text-xs font-black uppercase tracking-wider">
+            Application Not Approved
+          </span>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Membership Application Status
+          </h1>
+          <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+            Your previous membership application was not approved by the club committee. If you believe this was in error or you wish to submit updated details, you may submit a new application below.
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Button
+            variant="amber"
+            size="md"
+            onClick={handleOpenApplyModal}
+          >
+            Re-submit Application
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // STATE 3: GUEST OR NOT YET APPLIED -> HERO PLAN & APPLICATION FORM
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 animate-fade-in">
@@ -288,14 +345,44 @@ export default function Membership() {
           </ul>
 
           <div className="pt-4">
-            <Button
-              variant="amber"
-              size="lg"
-              fullWidth
-              onClick={() => setIsApplyModalOpen(true)}
-            >
-              Apply for Membership Now
-            </Button>
+            {user ? (
+              <Button
+                variant="amber"
+                size="lg"
+                fullWidth
+                onClick={handleOpenApplyModal}
+              >
+                Apply for Membership Now
+              </Button>
+            ) : (
+              <Button
+                variant="amber"
+                size="lg"
+                fullWidth
+                onClick={loginWithGoogle}
+                className="flex items-center justify-center gap-2.5 font-bold"
+              >
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Sign in with Google to Apply</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -311,66 +398,97 @@ export default function Membership() {
             <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center font-black mx-auto">
               1
             </div>
-            <h4 className="text-sm font-bold text-slate-900">Submit Application</h4>
+            <h4 className="text-sm font-bold text-slate-900">Sign in with Google</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Fill out your basic identity details and upload a photo for your official club card.
+              Verify your identity instantly. Your email and Google profile are securely bound to your membership.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-white border border-slate-200 text-center space-y-3 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center font-black mx-auto">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black mx-auto">
               2
             </div>
-            <h4 className="text-sm font-bold text-slate-900">Admin Approval</h4>
+            <h4 className="text-sm font-bold text-slate-900">Submit Application</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              The club committee reviews your submission and generates your unique sequential CLUB-ID.
+              Fill in your contact and identity details and upload a photo for your official club badge.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-white border border-slate-200 text-center space-y-3 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center font-black mx-auto">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black mx-auto">
               3
             </div>
-            <h4 className="text-sm font-bold text-slate-900">Digital Pass Issued</h4>
+            <h4 className="text-sm font-bold text-slate-900">Pass Issued</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Your 1-year verified digital membership card goes live instantly in your portal and app.
+              Once verified by the club committee, your verified digital membership card is issued instantly.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Membership Public Card Lookup / Search */}
-      <div className="max-w-xl mx-auto p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
-        <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">
-          Already a Member? Search Official Pass
-        </h3>
+      {/* Public Member Verification Lookup */}
+      <div className="max-w-2xl mx-auto p-8 rounded-3xl bg-slate-900 text-white space-y-6 shadow-2xl">
+        <div className="text-center space-y-2">
+          <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-amber-400 text-xs font-bold uppercase tracking-wider">
+            Public Registry
+          </span>
+          <h3 className="text-xl font-bold tracking-tight">Verify a Club Member</h3>
+          <p className="text-xs text-slate-400">
+            Check official membership status by entering a CLUB-ID (e.g. CLUB-000001), registered email, or phone number.
+          </p>
+        </div>
+
         <form onSubmit={handleLookup} className="flex gap-2">
           <input
             type="text"
             value={lookupQuery}
-            onChange={(e) => setLookupQuery(e.target.value)}
-            placeholder="Enter CLUB-ID (e.g. CLUB-000001) or Email..."
-            className="form-input flex-1"
+            onChange={(e) => {
+              setLookupQuery(e.target.value);
+              setLookupDone(false);
+            }}
+            placeholder="CLUB-000001, phone, or email..."
+            className="flex-1 px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
-          <Button variant="primary" size="md" type="submit">
-            Search
-          </Button>
+          <button
+            type="submit"
+            className="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition-colors shrink-0"
+          >
+            Verify
+          </button>
         </form>
 
         {lookupDone && (
-          lookedUpMember ? (
-            <div className="pt-4 border-t border-slate-100">
-              <DigitalIdCard member={lookedUpMember} />
-            </div>
-          ) : (
-            <p className="text-xs text-red-500 font-medium pt-2">
-              No verified membership found for "{lookupQuery}".
-            </p>
-          )
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 animate-fade-in">
+            {lookedUpMember ? (
+              <div className="flex items-center gap-4">
+                <img
+                  src={lookedUpMember.photoURL || lookedUpMember.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'}
+                  alt="Member"
+                  className="w-14 h-14 rounded-xl object-cover border border-white/20"
+                />
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm truncate">{lookedUpMember.name || lookedUpMember.fullName}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                      {lookedUpMember.status === 'approved' ? 'Active Member' : lookedUpMember.status}
+                    </span>
+                  </div>
+                  <p className="text-xs font-mono text-amber-400 font-bold">{lookedUpMember.membershipId}</p>
+                  <p className="text-[11px] text-slate-400">
+                    Valid until: {lookedUpMember.expiryDate ? new Date(lookedUpMember.expiryDate).toLocaleDateString() : 'Active'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-center text-slate-400 py-2">
+                No active official member found matching "{lookupQuery}".
+              </p>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Application Form Modal Dialog / Sliding Sheet */}
+      {/* Application Form Modal Dialog */}
       <Modal
         isOpen={isApplyModalOpen}
         onClose={() => setIsApplyModalOpen(false)}
@@ -419,7 +537,7 @@ export default function Membership() {
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400 leading-tight">Will be printed on your digital membership card.</p>
+                <p className="text-[10px] text-slate-400 leading-tight">Will be displayed on your official digital ID card.</p>
               </div>
             </div>
 
@@ -443,18 +561,26 @@ export default function Membership() {
             />
           </div>
 
-          {/* Email & Phone */}
+          {/* Locked Verified Email & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="form-label">Email Address *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="form-label mb-0 flex items-center gap-1">
+                  <FiLock className="text-slate-400 text-xs" /> Verified Google Email
+                </label>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  Verified
+                </span>
+              </div>
               <input
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="name@gmail.com"
-                className="form-input"
+                value={user?.email || formData.email}
+                readOnly
+                disabled
+                className="form-input bg-slate-100 text-slate-500 cursor-not-allowed select-none font-medium"
                 required
               />
+              <p className="text-[10px] text-slate-400 mt-1">Bound to your authenticated Google account.</p>
             </div>
 
             <div>

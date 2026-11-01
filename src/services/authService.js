@@ -2,9 +2,9 @@
 //
 // With Firebase configured:
 //   • Members sign in with Google (Firebase Auth). Their profile lives in Firestore `users/{uid}`
-//     (same schema as the mobile app) and is linked to their `members` record by uid or email.
+//     and is linked to their `members/mem_{uid}` record by uid.
 //   • Admins sign in with email + password (Firebase Auth). An account is an admin only if a
-//     Firestore document `admins/{uid}` exists with role 'admin' — nothing is hard-coded here.
+//     Firestore document `admins/{uid}` exists with role 'admin'.
 // Without Firebase (bare local development) a local demo admin and a mock Google user are used.
 
 import { auth, googleProvider } from '../config/firebase';
@@ -14,7 +14,6 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { store, useCloud, serverTimestamp } from './store';
-import { memberService } from './memberService';
 
 const SESSION_KEY = 'universal_club_auth_user'; // cached session for instant UI; Firebase Auth is authoritative
 
@@ -174,27 +173,21 @@ export const authService = {
   },
 
   /**
-   * Creates / refreshes users/{uid} and links it to the matching `members` record (by uid or email),
-   * exactly like the mobile app. Existing fields written by the app (whatsapp, mobile, …) are kept.
+   * Creates / refreshes users/{uid} and pairs it directly with members/mem_{uid}.
    */
   syncUserProfile: async (fbUser) => {
     const uid = fbUser.uid;
-    const email = String(fbUser.email || '').toLowerCase();
-    // Only this person's records: by linked uid, or by their Google email (not the whole member list)
-    const [existing, byUid, byEmail] = await Promise.all([
+    const email = String(fbUser.email || '').toLowerCase().trim();
+    const docId = `mem_${uid}`;
+
+    // Targeted read: get users/{uid} and members/mem_{uid} (with byUid fallback)
+    const [existing, docRecord, byUid] = await Promise.all([
       store.get('users', uid),
-      store.findBy('members', 'userId', uid),
-      email ? store.findBy('members', 'email', fbUser.email) : [],
+      store.get('members', docId),
+      store.findBy('members', 'userId', uid, 1),
     ]);
 
-    const mine = [...byUid, ...byEmail.filter((m) => !byUid.some((u) => u.id === m.id))]
-      .sort((a, b) => (a.status === 'approved' ? -1 : b.status === 'approved' ? 1 : 0));
-    const record = mine[0] || null;
-
-    if (record && record.status === 'approved' && !record.userId) {
-      await memberService.linkMemberToUser(record.id, { uid, email });
-    }
-
+    const record = docRecord || byUid[0] || null;
     const membershipStatus = deriveMembershipStatus(record);
     const nowIso = new Date().toISOString();
     const photo = existing?.profilePhoto || fbUser.photoURL || '';
@@ -204,7 +197,7 @@ export const authService = {
       uid,
       name: existing?.name || fbUser.displayName || 'Club Member',
       fullName: existing?.fullName || fbUser.displayName || 'Club Member',
-      email: fbUser.email || existing?.email || '',
+      email: email || existing?.email || '',
       profilePhoto: photo,
       photoURL: existing?.photoURL || photo,
       role: existing?.role === 'admin' ? 'admin' : 'user',

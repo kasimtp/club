@@ -14,11 +14,10 @@ import { useAuth } from './AuthContext';
 
 const ClubDataContext = createContext(null);
 
-// Turns Firestore errors into something an admin can act on
+// Turns Firestore errors into clear user-friendly feedback
 export function describeDbError(err, fallback = 'Something went wrong.') {
   if (err?.code === 'permission-denied') {
-    return 'The database refused this. Only a signed-in Firebase admin account can do this — '
-      + 'sign out and sign in with an account that has an admins/{uid} document in Firestore.';
+    return 'Database permission denied: Please verify that you are signed in with the correct account, or contact the club committee.';
   }
   if (err?.code === 'unavailable') return 'Cannot reach the database — check your internet connection.';
   return err?.message || fallback;
@@ -189,4 +188,3 @@ export const useClubData = () => {
   }
   return context;
 };
-

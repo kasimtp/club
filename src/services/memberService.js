@@ -1,9 +1,9 @@
-// Membership Service — Firestore `members` + `counters/membershipCounter` (shared with the mobile app)
+// Membership Service — Firestore `members` + `counters/membershipCounter`
 //
-// Same model as the app: an application is a `members` document with status 'pending';
-// approval turns it into a member (status 'approved', CLUB-XXXXXX number, 1-year expiry).
-// Membership numbers come from the shared atomic counter so the app and the website never
-// hand out the same number.
+// Every application requires Google Authentication and is saved directly to `members/mem_{userId}`
+// with status 'pending'.
+// Approval by an admin generates a sequential CLUB-XXXXXX ID, sets a 1-year expiry,
+// and updates both `members` and `users/{uid}`.
 
 import { db } from '../config/firebase';
 import { doc, runTransaction } from 'firebase/firestore';
@@ -44,7 +44,7 @@ async function nextMembershipId() {
 const norm = (s) => String(s || '').toLowerCase().trim();
 const digits = (s) => String(s || '').replace(/\D/g, '');
 
-/** Mirrors membership state onto the linked user's profile (users/{uid}), like the app does */
+/** Mirrors membership state onto the linked user's profile (users/{uid}) */
 async function syncLinkedUser(userId, patch) {
   if (!userId) return;
   try {
@@ -58,13 +58,13 @@ const isApplication = (m) => m.status === 'pending' || m.status === 'rejected' |
 const isMemberRecord = (m) => m.status === 'approved' || m.status === 'expired';
 
 export const memberService = {
-  /** Every document in `members` (applications and members) */
+  /** Every document in `members` (applications and members) - admin only */
   getAll: () => store.list(MEMBERS),
 
-  /** Approved / expired members */
+  /** Approved / expired members - admin only */
   getMembers: async () => (await store.list(MEMBERS)).filter(isMemberRecord),
 
-  /** Applications (pending, rejected, and approved ones that came in online) */
+  /** Applications (pending, rejected, and approved ones) - admin only */
   getRequests: async () =>
     (await store.list(MEMBERS))
       .filter(isApplication)
@@ -80,7 +80,7 @@ export const memberService = {
     const attempts = /^club-/i.test(q)
       ? [['membershipId', q.toUpperCase()], ['membershipNumber', q.toUpperCase()]]
       : q.includes('@')
-        ? [['email', q], ['email', q.toLowerCase()]]
+        ? [['email', q.toLowerCase()]]
         : [['phone', digits(q)], ['mobile', digits(q)]];
     for (const [field, value] of attempts) {
       const hit = (await store.findBy(MEMBERS, field, value)).find(isMemberRecord);
@@ -89,44 +89,55 @@ export const memberService = {
     return null;
   },
 
-  submitApplication: async (formData, currentUser = null) => {
-    if (currentUser?.uid) {
-      try {
-        const myApps = await store.findBy(MEMBERS, 'userId', currentUser.uid, 2);
-        if (myApps.some((m) => m.status === 'pending')) {
-          throw new Error('An application is already pending review with this account.');
-        }
-        if (myApps.some((m) => m.status === 'approved')) {
-          throw new Error('An active membership record already exists for this account.');
-        }
-      } catch (err) {
-        if (err.message?.includes('already')) throw err;
+  /**
+   * Submit an official membership application.
+   * STRICT: Requires an authenticated Google user (`currentUser.uid` and `currentUser.email`).
+   * Never scans the entire members collection.
+   */
+  submitApplication: async (formData, currentUser) => {
+    if (!currentUser || !currentUser.uid) {
+      throw new Error('Please sign in with Google before submitting a membership application.');
+    }
+
+    const userId = currentUser.uid;
+    const docId = `mem_${userId}`;
+    const normalizedEmail = (currentUser.email || formData.email || '').toLowerCase().trim();
+
+    if (!normalizedEmail) {
+      throw new Error('A valid email address is required from your authenticated Google account.');
+    }
+
+    // Targeted check: ensure user doesn't already have an active/pending application
+    const existing = await store.get(MEMBERS, docId);
+    if (existing) {
+      if (existing.status === 'pending') {
+        throw new Error('You already have a membership application pending review by the club committee.');
+      }
+      if (existing.status === 'approved') {
+        throw new Error('You already have an active official Universal Club membership.');
       }
     }
-    const email = norm(formData.email);
-    const phone = digits(formData.phone || formData.mobile);
 
-    const id = currentUser?.uid ? `mem_${currentUser.uid}` : `mem_${phone || 'manual'}_${Date.now()}`;
     const nowIso = new Date().toISOString();
-    const name = formData.name || formData.fullName;
-    const photo = formData.photoURL || formData.profilePhoto || DEFAULT_PHOTO;
+    const name = (formData.name || formData.fullName || currentUser.displayName || '').trim();
+    const photo = formData.photoURL || formData.profilePhoto || currentUser.photoURL || DEFAULT_PHOTO;
 
     const application = {
-      id,
-      documentId: id,
-      userId: currentUser?.uid || null,
+      id: docId,
+      documentId: docId,
+      userId,
       name,
       fullName: name,
-      email: formData.email,
-      phone: formData.phone || formData.mobile,
-      mobile: formData.phone || formData.mobile,
+      email: normalizedEmail,
+      phone: digits(formData.phone || formData.mobile),
+      mobile: digits(formData.phone || formData.mobile),
       dateOfBirth: formData.dateOfBirth || formData.dob || '',
       gender: formData.gender || 'Male',
       bloodGroup: formData.bloodGroup || '',
-      address: formData.address || '',
+      address: (formData.address || '').trim(),
       photoURL: photo,
       profilePhoto: photo,
-      authProvider: currentUser ? 'google' : 'manual',
+      authProvider: 'google',
       source: 'new_application',
       status: 'pending',
       membershipId: null,
@@ -139,11 +150,16 @@ export const memberService = {
       createdAtServer: serverTimestamp(),
     };
 
-    await store.set(MEMBERS, id, application);
-    await syncLinkedUser(application.userId, { membershipStatus: 'pending' });
+    await store.set(MEMBERS, docId, application);
+    await syncLinkedUser(userId, { membershipStatus: 'pending' });
     return application;
   },
 
+  /**
+   * Approve a pending application.
+   * Atomically assigns the next sequential CLUB-XXXXXX ID, sets 1-year expiry,
+   * and updates both `members/{id}` and `users/{userId}`.
+   */
   approveApplication: async (memberDocId, adminName = 'Administrator') => {
     const application = await store.get(MEMBERS, memberDocId);
     if (!application) throw new Error('Application not found.');
@@ -164,10 +180,16 @@ export const memberService = {
     };
 
     await store.update(MEMBERS, memberDocId, patch);
-    await syncLinkedUser(application.userId, { membershipStatus: 'approved', membershipId });
+    if (application.userId) {
+      await syncLinkedUser(application.userId, { membershipStatus: 'approved', membershipId });
+    }
     return { ...application, ...patch };
   },
 
+  /**
+   * Reject an application.
+   * Updates application status to 'rejected' in both `members` and `users/{userId}`.
+   */
   rejectApplication: async (memberDocId, adminName = 'Administrator') => {
     const application = await store.get(MEMBERS, memberDocId);
     if (!application) throw new Error('Application not found.');
@@ -175,26 +197,34 @@ export const memberService = {
     const nowIso = new Date().toISOString();
     const patch = { status: 'rejected', rejectedAt: nowIso, rejectedBy: adminName, updatedAt: nowIso };
     await store.update(MEMBERS, memberDocId, patch);
-    await syncLinkedUser(application.userId, { membershipStatus: 'rejected' });
+    if (application.userId) {
+      await syncLinkedUser(application.userId, { membershipStatus: 'rejected' });
+    }
     return { ...application, ...patch };
   },
 
+  /**
+   * Extend membership validity by 1 full year.
+   */
   renewMember: async (memberDocId) => {
     const member = await store.get(MEMBERS, memberDocId);
     if (!member) throw new Error('Member record not found.');
 
     const now = new Date();
     const currentExpiry = member.expiryDate ? new Date(member.expiryDate) : now;
-    // Extend from the current expiry if still active, otherwise from today
     const expiryDate = calculateOneYearExpiry(currentExpiry > now ? currentExpiry : now);
     const patch = { expiryDate, status: 'approved', renewedAt: now.toISOString(), updatedAt: now.toISOString() };
 
     await store.update(MEMBERS, memberDocId, patch);
-    await syncLinkedUser(member.userId, { membershipStatus: 'approved', membershipId: member.membershipId });
+    if (member.userId) {
+      await syncLinkedUser(member.userId, { membershipStatus: 'approved', membershipId: member.membershipId });
+    }
     return { ...member, ...patch };
   },
 
-  /** Transcribe an existing paper / offline member */
+  /**
+   * Transcribe an existing paper / offline member record (Admin only).
+   */
   addExistingMember: async (formData, adminName = 'Administrator') => {
     const requestedId = (formData.membershipNumber || formData.membershipId || '').trim().toUpperCase();
     if (requestedId) {
@@ -208,8 +238,8 @@ export const memberService = {
     const nowIso = new Date().toISOString();
     const phone = digits(formData.phone || formData.mobile);
 
-    const id = `mem_${phone || 'manual'}_${Date.now()}`;
-    const name = formData.name || formData.fullName;
+    const id = `mem_offline_${phone || 'manual'}_${Date.now()}`;
+    const name = (formData.name || formData.fullName || '').trim();
     const photo = formData.photoURL || formData.profilePhoto || DEFAULT_PHOTO;
 
     return store.set(MEMBERS, id, {
@@ -218,13 +248,13 @@ export const memberService = {
       userId: null,
       name,
       fullName: name,
-      email: formData.email || '',
-      phone: formData.phone || formData.mobile || '',
-      mobile: formData.phone || formData.mobile || '',
+      email: (formData.email || '').toLowerCase().trim(),
+      phone: digits(formData.phone || formData.mobile),
+      mobile: digits(formData.phone || formData.mobile),
       dateOfBirth: formData.dateOfBirth || '',
       gender: formData.gender || 'Male',
       bloodGroup: formData.bloodGroup || '',
-      address: formData.address || '',
+      address: (formData.address || '').trim(),
       photoURL: photo,
       profilePhoto: photo,
       authProvider: 'manual',
@@ -257,8 +287,9 @@ export const memberService = {
     const member = await store.get(MEMBERS, memberDocId);
     if (!member) throw new Error('Member not found.');
     await store.update(MEMBERS, memberDocId, { userId: null, linkedAt: null, updatedAt: new Date().toISOString() });
-    await syncLinkedUser(member.userId, { membershipStatus: 'not_applied', membershipId: null });
+    if (member.userId) {
+      await syncLinkedUser(member.userId, { membershipStatus: 'not_applied', membershipId: null });
+    }
     return { ...member, userId: null, linkedAt: null };
   },
 };
-

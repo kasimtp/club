@@ -1,12 +1,6 @@
 rules_version = '2';
 
-// Universal Arts & Sports Club Vellur — Firestore security rules for the website.
-//
-// ⚠ Not deployed automatically. The database currently allows anyone to read and write
-// everything. Publish these from Firebase Console → Firestore → Rules once:
-//   1. at least one admin signs in with Firebase Authentication and has a document admins/{uid}, and
-//   2. the mobile app's admin login also uses Firebase Authentication (its current username/password
-//      check against the `admins` collection will stop working under these rules).
+// Universal Arts & Sports Club Vellur — Cloud Firestore Security Rules
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -18,9 +12,8 @@ service cloud.firestore {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    function ownsEmail(data) {
-      return signedIn() && request.auth.token.email != null
-        && data.email.lower() == request.auth.token.email.lower();
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
     }
 
     // ── Public website content: everyone can read, only admins can change ──
@@ -38,40 +31,38 @@ service cloud.firestore {
 
     // ── Private profiles: each person sees and edits only their own; admins see all ──
     match /users/{uid} {
-      allow read, write: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow read, write: if isOwner(uid) || isAdmin();
     }
 
-    // ── Membership applications and members ──
+    // ── Membership applications and official members ──
     match /members/{id} {
-      // Admins: everything. Members: only their own record (linked uid or their Google email).
+      // Admins can read all records.
+      // Authenticated users can read only their own member document (by userId or doc ID).
       allow read: if isAdmin()
-        || (signedIn() && resource.data.userId == request.auth.uid)
-        || ownsEmail(resource.data);
+        || (signedIn() && (resource.data.userId == request.auth.uid || id == 'mem_' + request.auth.uid));
 
-      // A signed-in person can submit their own pending application
+      // STRICT: Only authenticated users can submit a pending application for themselves.
+      // Validates userId matches auth UID, email matches Firebase token email, and status is pending.
       allow create: if isAdmin()
-        || (request.resource.data.status == 'pending');
-
-      // A member can link their existing paper record to their Google account (only those fields)
-      allow update: if isAdmin()
-        || (ownsEmail(resource.data)
+        || (signedIn()
             && request.resource.data.userId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['userId', 'linkedAt', 'updatedAt', 'updatedAtServer']));
+            && request.resource.data.email == request.auth.token.email.lower()
+            && request.resource.data.status == 'pending');
 
+      // Only admins can approve, reject, renew, update or delete member records.
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Membership number counter: only admins issue numbers
+    // Membership number counter: only admins atomically issue numbers
     match /counters/{id} {
       allow read, write: if isAdmin();
     }
 
-    // Admin registry: an admin can read their own entry; manage entries in the Firebase Console
+    // Admin registry: an admin can read their own entry; writes disabled from client SDK
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
     }
   }
 }
-

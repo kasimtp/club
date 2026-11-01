@@ -91,6 +91,7 @@ export const AuthProvider = ({ children }) => {
   const membershipStatus = user?.membershipStatus || 'not_applied';
   const isMember = membershipStatus === 'approved';
   const isPending = membershipStatus === 'pending';
+  const isRejected = membershipStatus === 'rejected';
   const memberData = user?.memberData || null;
 
   return (
@@ -101,6 +102,7 @@ export const AuthProvider = ({ children }) => {
         isAdmin,
         isMember,
         isPending,
+        isRejected,
         membershipStatus,
         memberData,
         loading: loading || !authReady,
